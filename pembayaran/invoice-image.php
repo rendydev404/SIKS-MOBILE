@@ -73,7 +73,7 @@ $totalTagihan = $totalTunggakan;
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #1a1a2e; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .invoice-container { width: 400px; }
+        .invoice-container { width: 100%; max-width: 400px; }
         .invoice { background: linear-gradient(145deg, #16213e 0%, #1a1a2e 100%); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
         .invoice-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; text-align: center; color: white; }
         .invoice-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
