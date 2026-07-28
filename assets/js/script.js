@@ -11,8 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Close when clicking outside or clicking a nav link
         document.addEventListener('click', (e) => {
             if (sidebar.classList.contains('active')) {
-                const isClickInside = sidebar.contains(e.target) || menuToggle.contains(e.target);
-                if (!isClickInside) {
+                const isClickInside = sidebar.contains(e.target) || (menuToggle && menuToggle.contains(e.target));
+                // Because the overlay is a ::before pseudo-element of .sidebar, 
+                // clicking the overlay counts as clicking inside. We check clientX > 250 to fix this.
+                if (!isClickInside || e.clientX > 250) {
                     sidebar.classList.remove('active');
                 }
             }

@@ -34,14 +34,14 @@
             </div>
             <span>Verifikasi</span>
         </a>
-        <a href="#" class="bn-item" onclick="document.getElementById('sidebar').classList.add('active'); event.stopPropagation(); return false;">
+        <a href="#" class="bn-item" onclick="document.getElementById('sidebar').classList.toggle('active'); event.stopPropagation(); return false;">
             <i class="fas fa-bars"></i>
             <span>Lainnya</span>
         </a>
     </nav>
     <?php endif; ?>
     
-    <script src="<?= BASE_URL ?>assets/js/script.js"></script>
+    <script src="<?= BASE_URL ?>assets/js/script.js?v=<?= time() ?>"></script>
     <script>
         // Ultimate fallback: Force click listener on the document level
         document.addEventListener('click', function(e) {
