@@ -1,0 +1,210 @@
+/* MOBILE RESPONSIVE STYLES */
+
+@media (max-width: 900px) {
+    /* SIDEBAR TOGGLE */
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: none;
+        width: 250px;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+
+    /* OVERLAY */
+    .sidebar.active::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 250px;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 90;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .menu-toggle {
+        display: block !important;
+        font-size: 24px;
+        padding: 5px;
+    }
+    
+    /* TOOLBAR & FORMS */
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+    }
+    
+    .filter-group select, 
+    .filter-group input,
+    .filter-group button {
+        width: 100% !important;
+    }
+    
+    /* HEADER */
+    .header-right {
+        gap: 10px;
+    }
+    
+    .user-name {
+        display: none;
+    }
+    
+    /* STUDENT PORTAL HEADER */
+    .siswa-portal-header {
+        padding: 15px !important;
+        flex-direction: column;
+        gap: 15px;
+        height: auto;
+    }
+    
+    .brand-section {
+        margin-bottom: 0;
+        text-align: center;
+        width: 100%;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        display: flex;
+    }
+    
+    .action-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    /* HIDE TEXT IN BUTTONS ON MOBILE */
+    .action-btn span {
+        display: none; 
+    }
+    .action-btn i {
+        margin: 0;
+    }
+
+    /* GRIDS & CARDS */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .row {
+        display: block !important;
+    }
+
+    .row > div {
+        width: 100% !important;
+        margin-bottom: 15px;
+        min-width: 0 !important;
+    }
+    
+    .modal-content {
+        width: 95% !important;
+        margin: 10px auto;
+    }
+
+    /* TABLES SCROLLABLE */
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 1rem;
+    }
+    
+    .table {
+        min-width: 700px; /* Ensure swipability */
+    }
+
+    /* MONTH FLOW (SPP Portal) - THE SWIPE FEATURE */
+    .month-flow {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        gap: 12px;
+        padding-bottom: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) transparent;
+        padding: 5px;
+    }
+
+    .month-flow::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .month-flow::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 10px;
+    }
+
+    .month-node {
+        flex: 0 0 110px !important; /* Fixed width to force horizontal scroll */
+        min-width: 110px !important;
+    }
+
+    /* ACADEMIC GRIDS (Tambah/Edit Siswa) */
+    #akademikTahunanGrid, 
+    #daftarUlangGrid,
+    #historyContainer,
+    .academic-grid,
+    .history-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .migrate-box {
+        padding: 12px !important;
+    }
+
+    /* GENERAL MOBILE TWEAKS */
+    .content-wrapper {
+        padding: 12px !important;
+    }
+
+    .card {
+        border-radius: var(--radius-md) !important;
+    }
+    
+    .card-body {
+        padding: 15px !important;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    /* LOGIN PAGE */
+    .login-box {
+        padding: 30px 20px;
+        max-width: 100%;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 16px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+}
