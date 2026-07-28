@@ -1,5 +1,10 @@
 /* MOBILE RESPONSIVE STYLES */
 
+/* HIDE BOTTOM NAV ON DESKTOP BY DEFAULT */
+.bottom-nav {
+    display: none;
+}
+
 @media (max-width: 900px) {
     /* SIDEBAR TOGGLE */
     .sidebar {
@@ -29,12 +34,86 @@
     .main-content {
         margin-left: 0;
         width: 100%;
+        padding-bottom: 80px !important;
     }
 
     .menu-toggle {
-        display: block !important;
-        font-size: 24px;
-        padding: 5px;
+        display: none !important;
+    }
+    
+    /* BOTTOM NAVIGATION BAR (MOBILE) */
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border-top: 1px solid var(--glass-border);
+        padding: 10px 5px 15px 5px; /* iOS safe area spacing */
+        z-index: 1000;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    }
+
+    .bn-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+        gap: 5px;
+        transition: all 0.3s ease;
+        padding: 5px 10px;
+        border-radius: 12px;
+        flex: 1;
+    }
+
+    .bn-item:hover, .bn-item.active {
+        color: var(--primary-light);
+    }
+    
+    body.light-mode .bn-item:hover, body.light-mode .bn-item.active {
+        color: var(--primary);
+    }
+
+    .bn-item i {
+        font-size: 20px;
+        margin-bottom: 2px;
+        transition: transform 0.2s ease;
+    }
+    
+    .bn-item.active i {
+        transform: translateY(-3px);
+    }
+
+    .bn-icon-wrap {
+        position: relative;
+    }
+
+    .bn-badge {
+        position: absolute;
+        top: -6px;
+        right: -10px;
+        background: var(--danger);
+        color: white;
+        font-size: 9px;
+        padding: 2px 5px;
+        border-radius: 10px;
+        border: 2px solid var(--bg-card);
+    }
+
+    body.light-mode .bn-badge {
+        border-color: white;
+    }
+
+    .sidebar {
+        z-index: 1001 !important; /* Above bottom nav */
     }
     
     /* TOOLBAR & FORMS */
