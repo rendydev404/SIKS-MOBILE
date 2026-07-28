@@ -484,26 +484,41 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
         scale: 2
     }).then(canvas => {
         canvas.toBlob(blob => {
+            const openWA = () => {
+                window.open("<?= $waLink ?>", "_blank");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fab fa-whatsapp"></i> Bagikan WA';
+            };
+
+            const downloadImage = () => {
+                let link = document.createElement('a');
+                link.download = 'Invoice_<?= e($siswa['nama']) ?>.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+
             try {
-                const item = new ClipboardItem({ "image/png": blob });
-                navigator.clipboard.write([item]).then(() => {
-                    showToast("Gambar berhasil disalin! Membuka WhatsApp...");
-                    setTimeout(() => {
-                        window.open("<?= $waLink ?>", "_blank");
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fab fa-whatsapp"></i> Salin & Buka WA';
-                    }, 1000);
-                }).catch(err => {
-                    console.error(err);
-                    showToast("Gagal menyalin gambar secara otomatis.");
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fab fa-whatsapp"></i> Salin & Buka WA';
-                });
+                if (navigator.clipboard && window.ClipboardItem) {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    navigator.clipboard.write([item]).then(() => {
+                        showToast("Gambar disalin! Tempel (Paste) di WA.");
+                        setTimeout(openWA, 1500);
+                    }).catch(err => {
+                        console.error(err);
+                        showToast("Salin otomatis tidak didukung. Mengunduh gambar...");
+                        downloadImage();
+                        setTimeout(openWA, 2000);
+                    });
+                } else {
+                    showToast("Browser tidak mendukung salin otomatis. Mengunduh gambar...");
+                    downloadImage();
+                    setTimeout(openWA, 2000);
+                }
             } catch (err) {
                 console.error(err);
-                showToast("Browser tidak mendukung fitur salin gambar.");
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-whatsapp"></i> Salin & Buka WA';
+                showToast("Gagal menyalin, mengunduh gambar...");
+                downloadImage();
+                setTimeout(openWA, 2000);
             }
         }, 'image/png');
     });
