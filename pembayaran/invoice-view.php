@@ -485,7 +485,7 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
     }).then(canvas => {
         canvas.toBlob(blob => {
             const openWA = () => {
-                window.open("<?= $waLink ?>", "_blank");
+                window.location.href = "<?= $waLink ?>";
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fab fa-whatsapp"></i> Bagikan WA';
             };
@@ -502,23 +502,23 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
                     const item = new ClipboardItem({ "image/png": blob });
                     navigator.clipboard.write([item]).then(() => {
                         showToast("Gambar disalin! Tempel (Paste) di WA.");
-                        setTimeout(openWA, 1500);
+                        setTimeout(openWA, 1000);
                     }).catch(err => {
                         console.error(err);
-                        showToast("Salin otomatis tidak didukung. Mengunduh gambar...");
+                        showToast("Menyiapkan gambar...");
                         downloadImage();
-                        setTimeout(openWA, 2000);
+                        setTimeout(openWA, 1000);
                     });
                 } else {
-                    showToast("Browser tidak mendukung salin otomatis. Mengunduh gambar...");
+                    showToast("Menyiapkan gambar...");
                     downloadImage();
-                    setTimeout(openWA, 2000);
+                    setTimeout(openWA, 1000);
                 }
             } catch (err) {
                 console.error(err);
-                showToast("Gagal menyalin, mengunduh gambar...");
+                showToast("Menyiapkan gambar...");
                 downloadImage();
-                setTimeout(openWA, 2000);
+                setTimeout(openWA, 1000);
             }
         }, 'image/png');
     });
