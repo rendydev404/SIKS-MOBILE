@@ -34,7 +34,7 @@
             </div>
             <span>Verifikasi</span>
         </a>
-        <a href="#" class="bn-item" onclick="document.getElementById('sidebar').classList.add('active'); return false;">
+        <a href="#" class="bn-item" onclick="document.getElementById('sidebar').classList.add('active'); event.stopPropagation(); return false;">
             <i class="fas fa-bars"></i>
             <span>Lainnya</span>
         </a>
