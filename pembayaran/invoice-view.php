@@ -46,158 +46,215 @@ foreach ($tunggakanSppList as $sppLabel) {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Invoice - <?= e($siswa['nama']) ?></title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f4f8;
-            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .invoice-card {
-            background-color: #a5c6e8;
-            width: 500px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            position: relative;
-            color: #333;
-        }
-        .header-bar {
-            background-color: #3b82f6;
-            height: 10px;
+            background-color: var(--bg-card);
             width: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
+            max-width: 480px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
+            position: relative;
         }
-        .invoice-badge {
-            background-color: #ffffff;
-            color: #000;
-            font-weight: bold;
-            display: inline-block;
-            padding: 5px 15px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
+        .invoice-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            padding: 25px 20px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        .invoice-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .invoice-header p {
+            font-size: 14px;
+            opacity: 0.9;
         }
         .logo-container {
-            text-align: right;
             position: absolute;
             top: 20px;
-            right: 30px;
+            right: 20px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
         }
         .logo-container img {
-            width: 80px;
+            width: 50px;
             height: auto;
+            display: block;
+        }
+        .invoice-body {
+            padding: 25px 20px;
         }
         .salutation {
-            font-style: italic;
-            margin-bottom: 5px;
-            clear: both;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 15px;
         }
-        .tagline {
-            margin-bottom: 25px;
-        }
-        .details {
+        .student-info {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
             margin-bottom: 20px;
         }
-        .details-row {
+        .student-info-row {
             display: flex;
-            margin-bottom: 5px;
-        }
-        .details-label {
-            width: 80px;
-            font-weight: normal;
-        }
-        .details-separator {
-            width: 20px;
-        }
-        .details-value {
-            font-weight: bold;
-        }
-        .table-container {
-            margin-top: 20px;
-        }
-        .table-title {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #ffffff;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #e2e8f0;
-        }
-        .bg-grey {
-            background-color: #cbd5e1;
-        }
-        .bank-info {
-            margin-top: 30px;
-            border: 1px solid #000;
-            background-color: #cbd5e1;
-            padding: 5px;
-        }
-        .bank-info-row {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
+            margin-bottom: 8px;
             font-size: 14px;
         }
-        .wa-instructions {
-            margin-top: 20px;
+        .student-info-row:last-child { margin-bottom: 0; }
+        .info-label { width: 90px; color: var(--text-muted); }
+        .info-val { font-weight: 600; flex: 1; }
+        
+        .rincian-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--primary);
+            display: inline-block;
+            padding-bottom: 4px;
         }
-        .wa-number {
-            font-weight: bold;
+        .table-rincian {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 14px;
         }
-        .signature {
-            margin-top: 40px;
+        .table-rincian th, .table-rincian td {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .table-rincian th {
             text-align: left;
-            margin-left: 20px;
-            position: relative;
+            font-weight: 500;
+            color: var(--text-muted);
         }
-        .stamp-container {
-            position: relative;
-            margin-top: 10px;
+        .table-rincian td.amount {
+            text-align: right;
+            font-weight: 600;
         }
+        .table-rincian tr.total-row td {
+            border-bottom: none;
+            padding-top: 15px;
+            font-size: 16px;
+        }
+        .table-rincian tr.total-row td.amount {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .payment-info {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .payment-info p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .bank-details {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            letter-spacing: 0.5px;
+        }
+        .bank-owner {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-top: 4px;
+        }
+        
+        .footer-note {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+        .footer-note strong { color: var(--text-main); }
+        
+        .signature-area {
+            display: flex;
+            justify-content: flex-end;
+            text-align: center;
+            font-size: 13px;
+        }
+        .signature-box { width: 150px; }
         .signature-name {
-            margin-top: 60px;
-            font-weight: bold;
+            margin-top: 50px;
+            font-weight: 700;
             text-decoration: underline;
         }
+
         .actions {
             margin-bottom: 20px;
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
+            justify-content: center;
+            width: 100%;
+            max-width: 480px;
         }
         .btn-action {
-            padding: 10px 20px;
+            padding: 12px 20px;
             cursor: pointer;
             border: none;
-            border-radius: 4px;
-            font-weight: bold;
+            border-radius: 10px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 140px;
+            justify-content: center;
+            transition: opacity 0.2s;
         }
-        .btn-print { background: #3b82f6; color: white; }
-        .btn-copy { background: #f59e0b; color: white; }
-        .btn-download { background: #10b981; color: white; }
-        .btn-back { background: #6b7280; color: white; }
+        .btn-action:active { opacity: 0.8; }
+        .btn-print { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-copy { background: #25d366; color: white; }
+        .btn-download { background: var(--primary); color: white; }
+        .btn-back { background: var(--text-muted); color: white; }
 
-        /* Toast Styling */
         #toast {
             visibility: hidden;
             min-width: 250px;
-            background-color: #333;
+            background-color: #1f2937;
             color: #fff;
             text-align: center;
             border-radius: 8px;
@@ -220,103 +277,101 @@ foreach ($tunggakanSppList as $sppLabel) {
         @media print {
             .actions { display: none; }
             body { background-color: #fff; padding: 0; }
-            .invoice-card { box-shadow: none; border: 1px solid #eee; }
+            .invoice-card { box-shadow: none; max-width: 100%; border-radius: 0; }
         }
     </style>
 </head>
 <body>
 
 <div class="actions">
-    <button class="btn-action btn-print" onclick="window.print()">
-        <i class="fas fa-print"></i> Cetak PDF
-    </button>
-    <button id="shareBtn" class="btn-action" style="background: #0ea5e9; display: none;">
-        <i class="fas fa-share-nodes"></i> Bagikan
-    </button>
-    <button id="copyAndWaBtn" class="btn-action btn-copy" style="background: #25d366;">
-        <i class="fab fa-whatsapp"></i> Salin & Buka WA
+    <button id="copyAndWaBtn" class="btn-action btn-copy">
+        <i class="fab fa-whatsapp"></i> Bagikan WA
     </button>
     <button id="downloadBtn" class="btn-action btn-download">
-        <i class="fas fa-image"></i> Download Gambar
+        <i class="fas fa-download"></i> Simpan
+    </button>
+    <button class="btn-action btn-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Cetak
     </button>
     <button class="btn-action btn-back" onclick="window.history.back()">
         <i class="fas fa-arrow-left"></i> Kembali
     </button>
 </div>
 
-<div id="toast">Gambar berhasil disalin! Tempel (Ctrl+v) di WhatsApp.</div>
+<div id="toast">Gambar berhasil disalin!</div>
 
 <div class="invoice-card" id="invoiceArea">
-    <div class="header-bar"></div>
-    <div class="logo-container">
-        <img src="../assets/img/logo_sekolah.png" alt="Logo Sekolah">
+    <div class="invoice-header">
+        <h1>INVOICE</h1>
+        <?php
+        $taglineBulan = $bulanName;
+        $taglineTahun = $tahun;
+        ?>
+        <p>SMK Al Amin • Tagihan s/d <?= $taglineBulan ?> <?= $taglineTahun ?></p>
+        <div class="logo-container">
+            <img src="../assets/img/logo_sekolah.png" alt="Logo">
+        </div>
     </div>
-    <div class="invoice-badge">INVOICE</div>
     
-    <div class="salutation">Assalamu'alikum Wr. Wb.</div>
-    <?php
-    // Tampilkan bulan sesuai dengan filter yang dipilih
-    $taglineBulan = $bulanName;
-    $taglineTahun = $tahun;
-    ?>
-    <div class="tagline">Berikut kami rincian tagihan sampai <?= $taglineBulan ?> <?= $taglineTahun ?></div>
-
-    <div class="details">
-        <div class="details-row">
-            <div class="details-label">Nama</div>
-            <div class="details-separator">:</div>
-            <div class="details-value"><?= e($siswa['nama']) ?></div>
+    <div class="invoice-body">
+        <div class="salutation">Assalamu'alaikum Wr. Wb.</div>
+        
+        <div class="student-info">
+            <div class="student-info-row">
+                <div class="info-label">Nama</div>
+                <div class="info-val"><?= e($siswa['nama']) ?></div>
+            </div>
+            <div class="student-info-row">
+                <div class="info-label">Jurusan</div>
+                <div class="info-val"><?= e($siswa['nama_kelas'] ?: $siswa['jurusan']) ?></div>
+            </div>
         </div>
-        <div class="details-row">
-            <div class="details-label">Jurusan</div>
-            <div class="details-separator">:</div>
-            <div class="details-value"><?= e($siswa['nama_kelas'] ?: $siswa['jurusan']) ?></div>
-        </div>
-    </div>
 
-    <div class="table-container">
-        <div class="table-title">Rincian Tagihan SPP</div>
-        <table>
+        <div class="rincian-title">Rincian Tagihan</div>
+        <table class="table-rincian">
             <tr>
-                <th width="35%">SPP Bulan s/d <?= $taglineBulan ?></th>
-                <td width="10%">Rp</td>
-                <td align="right"><?= number_format($totalSppHanya, 0, ',', '.') ?></td>
+                <th>SPP s/d <?= $taglineBulan ?></th>
+                <td class="amount">Rp <?= number_format($totalSppHanya, 0, ',', '.') ?></td>
             </tr>
             <?php if ($totalKenaikan > 0): ?>
             <tr>
-                <th>Penyesuaian/Kenaikan Biaya</th>
-                <td>Rp</td>
-                <td align="right"><?= number_format($totalKenaikan, 0, ',', '.') ?></td>
+                <th>Penyesuaian/Kenaikan</th>
+                <td class="amount">Rp <?= number_format($totalKenaikan, 0, ',', '.') ?></td>
             </tr>
             <?php endif; ?>
-            <tr class="bg-grey" style="font-weight: bold;">
-                <td align="center">Total Tagihan SPP</td>
-                <td>Rp</td>
-                <td align="right"><?= number_format($totalSppHanya + $totalKenaikan, 0, ',', '.') ?></td>
+            
+            <?php if (!empty($tunggakanLainnya)): ?>
+                <?php foreach ($tunggakanLainnya as $item): ?>
+                <tr>
+                    <th><?= e($item['nama']) ?></th>
+                    <td class="amount">Rp <?= number_format($item['sisa'], 0, ',', '.') ?></td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            
+            <tr class="total-row">
+                <td>Total Tagihan</td>
+                <td class="amount">Rp <?= number_format($tunggakanTotal, 0, ',', '.') ?></td>
             </tr>
         </table>
-    </div>
 
-    <div style="margin-top: 20px;">Pembayaran hanya dapat dilakukan melalui Rek:</div>
-    <div class="bank-info">
-        <div class="bank-info-row">
-            <span>SeaBank</span>
-            <span>901612378561</span>
-            <span>Mira Humairoh</span>
+        <div class="payment-info">
+            <p>Pembayaran dapat dilakukan melalui transfer ke:</p>
+            <div class="bank-details">SeaBank: 9016 1237 8561</div>
+            <div class="bank-owner">a.n. Mira Humairoh</div>
         </div>
-    </div>
 
-    <div class="wa-instructions">
-        Setelah itu mohon kirimkan tanda bukti transfer via WhatsApp:<br>
-        <span class="wa-number">085880719956</span>
-    </div>
+        <div class="footer-note">
+            Harap sertakan tanda bukti transfer via WhatsApp ke nomor:<br>
+            <strong>0858-8071-9956</strong>
+        </div>
 
-    <div class="signature">
-        <div>TTD</div>
-        <div>Keuangan SMK Al Amin</div>
-        
-        <div class="stamp-container">
-            <div class="signature-name">Memen Rohmatul Ummah S.Pd</div>
+        <div class="signature-area">
+            <div class="signature-box">
+                <div>Mengetahui,</div>
+                <div>Keuangan SMK Al Amin</div>
+                <div class="signature-name">Memen Rohmatul Ummah S.Pd</div>
+            </div>
         </div>
     </div>
 </div>
