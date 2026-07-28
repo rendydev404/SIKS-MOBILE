@@ -56,27 +56,6 @@
                     localStorage.setItem('siks-theme', isLight ? 'light' : 'dark');
                 }
             }
-        }, true); // use capture phase to intercept before anything else blocks it!
-        
-        // Auto-inject data-label for mobile responsive tables (Clean UI)
-        function injectTableLabels() {
-            document.querySelectorAll('.table').forEach(table => {
-                const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-                table.querySelectorAll('tbody tr').forEach(tr => {
-                    Array.from(tr.querySelectorAll('td')).forEach((td, index) => {
-                        if(headers[index]) {
-                            td.setAttribute('data-label', headers[index]);
-                        }
-                    });
-                });
-            });
-        }
-        
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', injectTableLabels);
-        } else {
-            injectTableLabels();
-        }
     </script>
 </body>
 </html>
