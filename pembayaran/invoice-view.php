@@ -429,51 +429,6 @@ document.getElementById('downloadBtn').addEventListener('click', function() {
     });
 });
 
-// Check if Web Share API is supported and if sharing files is allowed
-const shareBtn = document.getElementById('shareBtn');
-if (navigator.canShare && navigator.share) {
-    // We'll show the button if the browser indicates it can share (even if we don't know for sure it can share files yet)
-    shareBtn.style.display = 'block';
-}
-
-shareBtn.addEventListener('click', function() {
-    const btn = this;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
-
-    html2canvas(document.getElementById('invoiceArea'), {
-        useCORS: true,
-        scale: 2
-    }).then(canvas => {
-        canvas.toBlob(blob => {
-            const file = new File([blob], 'Invoice_<?= e($siswa['nama']) ?>.png', { type: 'image/png' });
-            
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({
-                    files: [file],
-                    title: 'Invoice SIKS SMK Al Amin',
-                    text: 'Berikut rincian tagihan SPP untuk <?= e($siswa['nama']) ?>'
-                })
-                .then(() => {
-                    showToast("Berhasil dibagikan!");
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-share-nodes"></i> Bagikan';
-                })
-                .catch(err => {
-                    console.error('Sharing failed', err);
-                    showToast("Gagal membagikan gambar.");
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-share-nodes"></i> Bagikan';
-                });
-            } else {
-                showToast("Browser tidak mendukung fitur bagi file.");
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-share-nodes"></i> Bagikan';
-            }
-        }, 'image/png');
-    });
-});
-
 document.getElementById('copyAndWaBtn').addEventListener('click', function() {
     const btn = this;
     btn.disabled = true;
