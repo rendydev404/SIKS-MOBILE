@@ -217,18 +217,18 @@ include '../includes/header.php';
     </div>
     
     <!-- Quick Nominal Setting -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 15px; margin-left: auto;">
-        <form method="POST" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <select name="set_tahun_masuk" class="form-control form-control-sm" style="width: auto; height: 35px; padding: 5px 10px; background: rgba(0,0,0,0.5); color: #fff !important; border: 1px solid rgba(255,255,255,0.1);">
+    <div class="filter-group" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 15px; margin-left: auto;">
+        <form method="POST" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
+            <select name="set_tahun_masuk" class="form-control form-control-sm" style="flex: 1; min-width: 120px; height: 35px; padding: 5px 10px; background: rgba(0,0,0,0.5); color: #fff !important; border: 1px solid rgba(255,255,255,0.1);">
                 <option value="0" style="color: #000;">Default (Semua <?= $labelTahun ?>)</option>
                 <?php for($y = 2023; $y <= date('Y')+1; $y++): ?>
                     <option value="<?= $y ?>" style="color: #000;"><?= $labelTahun ?> <?= $y ?></option>
                 <?php endfor; ?>
             </select>
             <input type="text" name="new_nominal" class="form-control currency-input" 
-                   style="width: 140px; height: 35px; padding: 5px 10px; font-size: 14px; text-align: right;" 
+                   style="flex: 1; min-width: 100px; height: 35px; padding: 5px 10px; font-size: 14px; text-align: right;" 
                    value="<?= number_format($nominalDefault, 0, ',', '.') ?>" placeholder="Rp">
-            <button type="submit" name="update_nominal" class="btn btn-primary btn-sm" style="height: 35px;">
+            <button type="submit" name="update_nominal" class="btn btn-primary btn-sm" style="flex: 1; min-width: 120px; height: 35px;">
                 <i class="fas fa-sync-alt"></i> Update Tarif
             </button>
         </form>
@@ -241,18 +241,18 @@ include '../includes/header.php';
     </div>
 </div>
 
-<div style="margin-bottom: 30px;">
-    <div style="display: flex; gap: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 12px; width: fit-content;">
-        <a href="?type=<?= urlencode($type) ?>&tab=lunas" class="btn <?= $tab == 'lunas' ? 'btn-success' : 'btn-secondary' ?>" style="min-width: 140px;">
+<div style="margin-bottom: 30px; width: 100%;">
+    <div class="mobile-scroll-x" style="gap: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 12px; width: 100%;">
+        <a href="?type=<?= urlencode($type) ?>&tab=lunas" class="btn <?= $tab == 'lunas' ? 'btn-success' : 'btn-secondary' ?>" style="padding: 10px 20px;">
             <i class="fas fa-check-double"></i> Lunas (<?= count($siswaLunas) ?>)
         </a>
-        <a href="?type=<?= urlencode($type) ?>&tab=pending" class="btn <?= $tab == 'pending' ? 'btn-warning' : 'btn-secondary' ?>" style="min-width: 160px; position: relative;">
+        <a href="?type=<?= urlencode($type) ?>&tab=pending" class="btn <?= $tab == 'pending' ? 'btn-warning' : 'btn-secondary' ?>" style="padding: 10px 20px; position: relative;">
             <i class="fas fa-clock"></i> Verifikasi (<?= count($pembayaranPending) ?>)
             <?php if (count($pembayaranPending) > 0): ?>
                 <span style="position: absolute; top: -5px; right: -5px; width: 10px; height: 10px; background: #ff4444; border-radius: 50%; border: 2px solid var(--bg-card);"></span>
             <?php endif; ?>
         </a>
-        <a href="?type=<?= urlencode($type) ?>&tab=belum" class="btn <?= $tab == 'belum' ? 'btn-danger' : 'btn-secondary' ?>" style="min-width: 140px;">
+        <a href="?type=<?= urlencode($type) ?>&tab=belum" class="btn <?= $tab == 'belum' ? 'btn-danger' : 'btn-secondary' ?>" style="padding: 10px 20px;">
             <i class="fas fa-exclamation-circle"></i> Nunggak (<?= count($siswaBelum) ?>)
         </a>
     </div>

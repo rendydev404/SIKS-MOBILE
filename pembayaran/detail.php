@@ -197,11 +197,11 @@ include '../includes/header.php';
     </div>
 </div>
 
-<div class="mt-3">
-    <a href="index.php" class="btn btn-secondary">
+<div class="mt-3" style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <a href="index.php" class="btn btn-secondary" style="flex: 1; text-align: center; min-width: 120px;">
         <i class="fas fa-arrow-left"></i> Kembali
     </a>
-    <a href="tambah.php?siswa_id=<?= $siswaId ?>" class="btn btn-success">
+    <a href="tambah.php?siswa_id=<?= $siswaId ?>" class="btn btn-success" style="flex: 2; text-align: center; min-width: 180px;">
         <i class="fas fa-plus"></i> Input Pembayaran
     </a>
 </div>

@@ -5,6 +5,21 @@
     display: none;
 }
 
+/* GENERIC HORIZONTAL SCROLL FOR TABS/BUTTONS ON MOBILE */
+.mobile-scroll-x {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+.mobile-scroll-x::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+.mobile-scroll-x > * {
+    flex: 0 0 auto;
+}
+
 @media (max-width: 900px) {
     /* SIDEBAR TOGGLE */
     .sidebar {
@@ -132,8 +147,10 @@
         align-items: stretch !important;
     }
     
-    .filter-group {
+    .filter-group,
+    .filter-group form {
         flex-direction: column;
+        align-items: stretch !important;
     }
     
     .filter-group select, 
