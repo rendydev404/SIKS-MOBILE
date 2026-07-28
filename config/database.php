@@ -6,10 +6,10 @@
 
 // Konfigurasi database
 define('DB_HOST', '127.0.0.1');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'db_spp');
-define('DB_PORT', 3307);
+define('DB_USER', 'u288761698_dilla');
+define('DB_PASS', 'Dilla@123#');
+define('DB_NAME', 'u288761698_siks');
+define('DB_PORT', 3306);
 
 // Membuat koneksi dengan PDO
 try {
@@ -35,7 +35,7 @@ if ($conn->connect_error) {
 $conn->set_charset("utf8mb4");
 
 // Base URL
-define('BASE_URL', '/sppsmkalamin/');
+define('BASE_URL', 'https://sikssmkalamin.absensismkalamin.my.id/');
 
 // Timezone
 date_default_timezone_set('Asia/Jakarta');
