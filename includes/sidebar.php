@@ -107,6 +107,13 @@
             </li>
             
             <li class="nav-item">
+                <a href="<?= BASE_URL ?>setting_wa.php" class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'setting_wa.php') !== false ? 'active' : '' ?>">
+                    <i class="fab fa-whatsapp" style="color:#25d366;"></i>
+                    <span>Setting WA Gateway</span>
+                </a>
+            </li>
+            
+            <li class="nav-item">
                 <a href="<?= BASE_URL ?>tahun-ajaran/" class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'tahun-ajaran') !== false ? 'active' : '' ?>">
                     <i class="fas fa-calendar-check"></i>
                     <span>Tahun Ajaran</span>

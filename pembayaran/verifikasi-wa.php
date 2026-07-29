@@ -338,19 +338,32 @@ include '../includes/header.php';
 
 <div id="toastMsg">Notification Message</div>
 
+<div id="autoStatusAlert" class="alert alert-info animate-slide-up" style="display:none; margin-bottom:20px; border-left:5px solid #25d366;">
+    <i class="fas fa-spinner fa-spin"></i> <span id="autoStatusText">Sedang membuat gambar kwitansi & mengirim otomatis ke WhatsApp...</span>
+</div>
+
 <script>
 function showToast(msg) {
     const toast = document.getElementById('toastMsg');
     toast.innerText = msg;
     toast.className = "show";
-    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3500);
 }
 
-document.getElementById('btnSendWaImage').addEventListener('click', function() {
-    const btn = this;
+const pembayaranId = <?= (int)$pembayaran['id'] ?>;
+
+function generateAndAutoSend(isManualClick = false) {
+    const btn = document.getElementById('btnSendWaImage');
     const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses Gambar...';
+    if (isManualClick) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    }
+
+    const autoAlert = document.getElementById('autoStatusAlert');
+    const autoText = document.getElementById('autoStatusText');
+    autoAlert.style.display = 'block';
+    autoText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan gambar kwitansi & pengiriman otomatis...';
 
     const targetEl = document.getElementById('kwitansiArea');
 
@@ -359,65 +372,93 @@ document.getElementById('btnSendWaImage').addEventListener('click', function() {
         scale: 2,
         backgroundColor: '#ffffff'
     }).then(canvas => {
-        canvas.toBlob(blob => {
-            const fileName = 'Kwitansi_Verifikasi_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $pembayaran['nama_siswa']) ?>.png';
-            const file = new File([blob], fileName, { type: 'image/png' });
+        const base64Image = canvas.toDataURL('image/png');
 
-            const openWaUrl = () => {
-                window.location.href = "<?= $waLink ?>";
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            };
-
-            const downloadImage = () => {
-                let link = document.createElement('a');
-                link.download = fileName;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            };
-
-            // 1. Try Native Web Share API (Best for Mobile Browsers)
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                showToast("Membuka menu bagikan WhatsApp...");
-                navigator.share({
-                    files: [file],
-                    title: 'Bukti Verifikasi Pembayaran',
-                    text: <?= json_encode($pesan) ?>
-                }).then(() => {
+        // Send base64 image to server to save kwitansi image & auto-send via WA Gateway
+        fetch('simpan-kwitansi.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pembayaran_id: pembayaranId,
+                image_data: base64Image
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.wa_sent) {
+                autoAlert.className = 'alert alert-success animate-slide-up';
+                autoText.innerHTML = '<i class="fas fa-check-circle" style="color:#25d366;"></i> <strong>' + data.wa_message + '</strong> Gambar Kwitansi & Pesan telah terkirim 100% otomatis ke WhatsApp!';
+                showToast("✓ Kwitansi & Pesan Terkirim Otomatis ke WA!");
+                if (isManualClick) {
                     btn.disabled = false;
                     btn.innerHTML = originalText;
-                }).catch(err => {
-                    console.log("Web Share cancelled/failed, fallbacking...", err);
-                    downloadImage();
-                    setTimeout(openWaUrl, 1000);
-                });
-            } 
-            // 2. Try Clipboard API (Best for Desktop Browsers)
-            else if (navigator.clipboard && window.ClipboardItem) {
-                const item = new ClipboardItem({ "image/png": blob });
-                navigator.clipboard.write([item]).then(() => {
-                    showToast("Gambar Kwitansi Disalin! Tempel (Ctrl+V) di WA.");
-                    setTimeout(openWaUrl, 1200);
-                }).catch(err => {
-                    console.error("Clipboard failed:", err);
-                    showToast("Menyiapkan gambar kwitansi...");
-                    downloadImage();
-                    setTimeout(openWaUrl, 1200);
-                });
-            } 
-            // 3. Fallback: Download Image + Redirect to WA
-            else {
-                showToast("Menyiapkan gambar kwitansi...");
-                downloadImage();
-                setTimeout(openWaUrl, 1200);
+                }
+            } else {
+                // If WA gateway token not configured or error, provide client-side share options
+                autoAlert.className = 'alert alert-warning animate-slide-up';
+                autoText.innerHTML = '<i class="fas fa-info-circle"></i> Gambar Kwitansi tersimpan di server (' + data.image_url + '). ' + (data.wa_message || 'Token WA Gateway belum aktif.');
+                
+                if (isManualClick) {
+                    canvas.toBlob(blob => {
+                        const fileName = 'Kwitansi_Verifikasi_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $pembayaran['nama_siswa']) ?>.png';
+                        const file = new File([blob], fileName, { type: 'image/png' });
+
+                        const openWaUrl = () => {
+                            window.location.href = "<?= $waLink ?>";
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                        };
+
+                        const downloadImage = () => {
+                            let link = document.createElement('a');
+                            link.download = fileName;
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                        };
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            navigator.share({ files: [file], title: 'Bukti Verifikasi Pembayaran', text: <?= json_encode($pesan) ?> })
+                                .then(() => { btn.disabled = false; btn.innerHTML = originalText; })
+                                .catch(() => { downloadImage(); setTimeout(openWaUrl, 1000); });
+                        } else if (navigator.clipboard && window.ClipboardItem) {
+                            navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+                                .then(() => { showToast("Gambar Kwitansi Disalin! Tempel (Ctrl+V) di WA."); setTimeout(openWaUrl, 1200); })
+                                .catch(() => { downloadImage(); setTimeout(openWaUrl, 1200); });
+                        } else {
+                            downloadImage();
+                            setTimeout(openWaUrl, 1200);
+                        }
+                    }, 'image/png');
+                }
             }
-        }, 'image/png');
+        })
+        .catch(err => {
+            console.error("AJAX simpan kwitansi error:", err);
+            autoAlert.style.display = 'none';
+            if (isManualClick) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
     }).catch(err => {
         console.error("html2canvas error:", err);
-        showToast("Gagal memproses gambar!");
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        autoAlert.style.display = 'none';
+        if (isManualClick) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     });
+}
+
+// Auto execute on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        generateAndAutoSend(false);
+    }, 500);
+});
+
+document.getElementById('btnSendWaImage').addEventListener('click', function() {
+    generateAndAutoSend(true);
 });
 </script>
 
