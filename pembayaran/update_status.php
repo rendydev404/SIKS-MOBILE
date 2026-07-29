@@ -8,6 +8,7 @@ checkLogin();
 $id = $_GET['id'] ?? '';
 $status = $_GET['status'] ?? '';
 $adminNote = $_GET['admin_note'] ?? null;
+$redirect = $_GET['redirect'] ?? 'verifikasi';
 
 if ($id && in_array($status, ['lunas', 'ditolak'])) {
     try {
@@ -24,6 +25,10 @@ if ($id && in_array($status, ['lunas', 'ditolak'])) {
         
         $msg = ($status == 'lunas') ? 'Pembayaran berhasil diverifikasi (Lunas).' : 'Pembayaran telah ditolak.';
         setAlert('success', $msg);
+
+        // Redirect ke halaman kirim WA verifikasi beserta gambar kwitansi
+        header('Location: verifikasi-wa.php?id=' . urlencode($id) . '&redirect=' . urlencode($redirect));
+        exit;
     } catch (PDOException $e) {
         setAlert('danger', 'Gagal memproses pembayaran.');
     }

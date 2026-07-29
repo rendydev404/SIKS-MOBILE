@@ -431,51 +431,73 @@ document.getElementById('downloadBtn').addEventListener('click', function() {
 
 document.getElementById('copyAndWaBtn').addEventListener('click', function() {
     const btn = this;
+    const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
     
     html2canvas(document.getElementById('invoiceArea'), {
         useCORS: true,
-        scale: 2
+        scale: 2,
+        backgroundColor: '#ffffff'
     }).then(canvas => {
         canvas.toBlob(blob => {
+            const fileName = 'Invoice_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $siswa['nama']) ?>.png';
+            const file = new File([blob], fileName, { type: 'image/png' });
+
             const openWA = () => {
                 window.location.href = "<?= $waLink ?>";
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-whatsapp"></i> Bagikan WA';
+                btn.innerHTML = originalText;
             };
 
             const downloadImage = () => {
                 let link = document.createElement('a');
-                link.download = 'Invoice_<?= e($siswa['nama']) ?>.png';
+                link.download = fileName;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             };
 
-            try {
-                if (navigator.clipboard && window.ClipboardItem) {
-                    const item = new ClipboardItem({ "image/png": blob });
-                    navigator.clipboard.write([item]).then(() => {
-                        showToast("Gambar disalin! Tempel (Paste) di WA.");
-                        setTimeout(openWA, 1000);
-                    }).catch(err => {
-                        console.error(err);
-                        showToast("Menyiapkan gambar...");
-                        downloadImage();
-                        setTimeout(openWA, 1000);
-                    });
-                } else {
+            // 1. Try Native Web Share API (Best for Mobile Browsers)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                showToast("Membuka menu bagikan WhatsApp...");
+                navigator.share({
+                    files: [file],
+                    title: 'Invoice Tagihan SPP',
+                    text: <?= json_encode($pesan) ?>
+                }).then(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }).catch(err => {
+                    console.log("Web Share cancelled/failed, fallbacking...", err);
+                    downloadImage();
+                    setTimeout(openWA, 1000);
+                });
+            }
+            // 2. Try Clipboard API (Best for Desktop Browsers)
+            else if (navigator.clipboard && window.ClipboardItem) {
+                const item = new ClipboardItem({ "image/png": blob });
+                navigator.clipboard.write([item]).then(() => {
+                    showToast("Gambar disalin! Tempel (Paste) di WA.");
+                    setTimeout(openWA, 1000);
+                }).catch(err => {
+                    console.error(err);
                     showToast("Menyiapkan gambar...");
                     downloadImage();
                     setTimeout(openWA, 1000);
-                }
-            } catch (err) {
-                console.error(err);
+                });
+            } 
+            // 3. Fallback Download & Redirect
+            else {
                 showToast("Menyiapkan gambar...");
                 downloadImage();
                 setTimeout(openWA, 1000);
             }
         }, 'image/png');
+    }).catch(err => {
+        console.error("html2canvas error:", err);
+        showToast("Gagal memproses gambar!");
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     });
 });
 </script>

@@ -354,8 +354,10 @@ include '../includes/header.php';
                     <td>
                         <div class="action-buttons">
                             <?php if (($row['status'] ?? 'lunas') == 'pending'): ?>
-                                <a href="update_status.php?id=<?= $row['id'] ?>&status=lunas" class="btn btn-success btn-sm" title="Setujui" onclick="return confirm('Verifikasi pembayaran ini sebagai LUNAS?')"><i class="fas fa-check"></i></a>
+                                <a href="update_status.php?id=<?= $row['id'] ?>&status=lunas&redirect=index" class="btn btn-success btn-sm" title="Setujui" onclick="return confirm('Verifikasi pembayaran ini sebagai LUNAS?')"><i class="fas fa-check"></i></a>
                                 <button class="btn btn-danger btn-sm btn-reject" data-id="<?= $row['id'] ?>" title="Tolak"><i class="fas fa-times"></i></button>
+                            <?php else: ?>
+                                <a href="verifikasi-wa.php?id=<?= $row['id'] ?>&redirect=index" class="btn btn-success btn-sm" title="Kirim WA (Gambar Kwitansi)" style="background: #25d366; border-color: #25d366;"><i class="fab fa-whatsapp"></i></a>
                             <?php endif; ?>
                             <a href="cetak.php?id=<?= $row['id'] ?>" class="btn btn-primary btn-sm" title="Cetak" target="_blank"><i class="fas fa-print"></i></a>
                             <a href="detail.php?siswa_id=<?= $row['siswa_id'] ?>" class="btn btn-secondary btn-sm" title="Detail"><i class="fas fa-eye"></i></a>

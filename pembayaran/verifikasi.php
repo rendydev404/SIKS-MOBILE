@@ -85,7 +85,7 @@ include '../includes/header.php';
                                         </button>
                                     <?php endif; ?>
                                     
-                                    <a href="update_status.php?id=<?= $row['id'] ?>&status=lunas" class="btn btn-success btn-sm" 
+                                    <a href="update_status.php?id=<?= $row['id'] ?>&status=lunas&redirect=verifikasi" class="btn btn-success btn-sm" 
                                        onclick="return confirm('Sahkan pembayaran <?= formatRupiah($row['jumlah_bayar']) ?> sebagai Lunas?')">
                                         <i class="fas fa-check"></i> Setujui
                                     </a>
@@ -93,6 +93,10 @@ include '../includes/header.php';
                                     <button class="btn btn-danger btn-sm btn-reject" data-id="<?= $row['id'] ?>" title="Tolak">
                                         <i class="fas fa-times"></i> Rejection
                                     </button>
+
+                                    <a href="verifikasi-wa.php?id=<?= $row['id'] ?>&redirect=verifikasi" class="btn btn-info btn-sm" style="background:#25d366; border-color:#25d366;" title="Kirim WA Kwitansi Gambar">
+                                        <i class="fab fa-whatsapp"></i> WA
+                                    </a>
                                 </div>
                             </td>
                         </tr>

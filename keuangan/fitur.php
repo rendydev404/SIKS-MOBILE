@@ -179,14 +179,18 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     $payId = $_GET['id'];
     
     if ($action === 'approve') {
-        $stmt = $pdo->prepare("UPDATE pembayaran SET status = 'lunas', user_id = ? WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id'], $payId]);
+        $stmt = $pdo->prepare("UPDATE pembayaran SET status = 'lunas', user_id = ?, verifikasi_admin_id = ?, tanggal_verifikasi = NOW() WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id'], $payId]);
         setAlert('success', 'Pembayaran berhasil diverifikasi!');
+        header("Location: ../pembayaran/verifikasi-wa.php?id=" . urlencode($payId) . "&redirect=fitur");
+        exit;
     } elseif ($action === 'reject') {
         $note = $_GET['reason'] ?? 'Bukti tidak valid atau tidak terbaca.';
-        $stmt = $pdo->prepare("UPDATE pembayaran SET status = 'ditolak', keterangan = CONCAT(keterangan, ' | Ditolak: ', ?) WHERE id = ?");
-        $stmt->execute([$note, $payId]);
+        $stmt = $pdo->prepare("UPDATE pembayaran SET status = 'ditolak', admin_note = ?, keterangan = CONCAT(keterangan, ' | Ditolak: ', ?) WHERE id = ?");
+        $stmt->execute([$note, $note, $payId]);
         setAlert('warning', 'Pembayaran ditolak.');
+        header("Location: ../pembayaran/verifikasi-wa.php?id=" . urlencode($payId) . "&redirect=fitur");
+        exit;
     }
     header("Location: fitur.php?type=" . urlencode($type) . "&tab=pending");
     exit;
