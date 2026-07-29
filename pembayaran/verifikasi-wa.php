@@ -376,9 +376,25 @@ document.getElementById('btnSendWaImage').addEventListener('click', function() {
                 link.click();
             };
 
+            // 0. Native Flutter App (JS Bridge)
+            if (typeof window.flutter_inappwebview !== 'undefined') {
+                showToast("Mengirim gambar ke WhatsApp via Aplikasi...");
+                window.flutter_inappwebview.callHandler('shareKwitansi', {
+                    base64: canvas.toDataURL('image/png').split(',')[1],
+                    fileName: fileName,
+                    text: <?= json_encode($pesan) ?>
+                }).then(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }).catch(err => {
+                    console.error("Flutter bridge error:", err);
+                    downloadImage();
+                    setTimeout(openWaUrl, 1000);
+                });
+            }
             // 1. Native Web Share API (Mobile Browsers - Android & iOS WhatsApp App)
             // Attaches the Kwitansi Image file directly into WhatsApp!
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            else if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 showToast("Membuka WhatsApp dengan Gambar Kwitansi terlampir...");
                 navigator.share({
                     files: [file],
