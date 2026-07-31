@@ -41,7 +41,7 @@
     </nav>
     <?php endif; ?>
     
-    <script src="<?= BASE_URL ?>assets/js/script.js?v=<?= time() ?>"></script>
+    <script src="<?= BASE_URL ?>assets/js/script.js?v=2.0.0" defer></script>
     <script>
         // Ultimate fallback: Force click listener on the document level
         document.addEventListener('click', function(e) {

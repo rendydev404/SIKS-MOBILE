@@ -4,60 +4,80 @@
    ===================================================== */
 
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #22d3ee;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --info: #3b82f6;
-    --bg-dark: #0f172a;
-    --bg-card: #1e293b;
-    --bg-hover: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --border-color: #334155;
-    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-    --gradient-info: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    /* Premium Modern Colors */
+    --primary: #4f46e5;      /* Indigo 600 */
+    --primary-dark: #3730a3; /* Indigo 800 */
+    --primary-light: #818cf8;/* Indigo 400 */
+    --secondary: #0ea5e9;    /* Sky 500 */
+    --success: #059669;      /* Emerald 600 */
+    --warning: #d97706;      /* Amber 600 */
+    --danger: #dc2626;       /* Red 600 */
+    --info: #2563eb;         /* Blue 600 */
+    
+    /* Dark Theme Surface Colors */
+    --bg-dark: #020617;      /* Slate 950 */
+    --bg-card: #0f172a;      /* Slate 900 */
+    --bg-hover: #1e293b;     /* Slate 800 */
+    --text-primary: #f8fafc; /* Slate 50 */
+    --text-secondary: #cbd5e1;/* Slate 300 */
+    --text-muted: #64748b;   /* Slate 500 */
+    --border-color: rgba(255, 255, 255, 0.1);
+    
+    /* Rich Gradients */
+    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --gradient-success: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    --gradient-danger: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    --gradient-info: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    
+    /* Dimensions & Fluid Typography */
     --sidebar-width: 260px;
     --header-height: 70px;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.3);
-    --radius-sm: 6px;
-    --radius-md: 10px;
+    --font-base: clamp(14px, 2vw, 16px);
+    --font-h1: clamp(24px, 4vw, 32px);
+    --font-h2: clamp(20px, 3vw, 24px);
+    
+    /* Elegant Shadows & Radii */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
     --radius-lg: 16px;
     --radius-xl: 24px;
     --radius-full: 9999px;
-    --transition-fast: 0.15s ease;
+    
+    /* Glassmorphism Defaults */
+    --glass-bg: rgba(15, 23, 42, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: blur(16px);
+    
+    /* Micro Animations */
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(51, 65, 85, 0.5);
-    --glass-blur: blur(12px);
+    --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* =====================================================
    LIGHT MODE - Override CSS Variables
    ===================================================== */
 body.light-mode {
-    --bg-dark: #f0f4f8;
-    --bg-card: #ffffff;
-    --bg-hover: #e8edf2;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --border-color: #d1d9e6;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
-    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
-    --shadow-xl: 0 16px 40px rgba(0,0,0,0.1);
-    --glass-bg: rgba(255,255,255,0.85);
-    --glass-border: rgba(0,0,0,0.08);
+    --bg-dark: #f8fafc;      /* Slate 50 */
+    --bg-card: #ffffff;      /* White */
+    --bg-hover: #f1f5f9;     /* Slate 100 */
+    --text-primary: #0f172a; /* Slate 900 */
+    --text-secondary: #334155;/* Slate 700 */
+    --text-muted: #64748b;   /* Slate 500 */
+    --border-color: rgba(0, 0, 0, 0.06);
+    
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
+    --shadow-xl: 0 16px 40px rgba(0,0,0,0.08);
+    
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(0, 0, 0, 0.05);
 }
 
 /* ── Base ── */
@@ -383,6 +403,7 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
+    font-size: var(--font-base);
 }
 
 a {

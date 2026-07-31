@@ -2,12 +2,21 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0f4f8">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' - ' : '' ?>SIKS SMK Al Amin</title>
+    
+    <!-- Preconnect & Preload for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/responsive.css?v=<?= time() ?>">
+    
+    <link rel="preload" href="<?= BASE_URL ?>assets/css/style.css?v=2.0.0" as="style">
+    <link rel="preload" href="<?= BASE_URL ?>assets/css/responsive.css?v=2.0.0" as="style">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css?v=2.0.0">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/responsive.css?v=2.0.0">
 </head>
 <body>
     <script>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<journey name="WhatsApp Native Intent Verification">
+   <description>Verify that tapping the WhatsApp button from within the Webview triggers the native WhatsApp application intent.</description>
+   <actions>
+      <action>Verify that the app is open and the WebView is loaded on the dashboard</action>
+      <action>Verify that the "Hubungi Admin via WhatsApp" link/button is visible inside the WebView</action>
+      <action>Tap the "Hubungi Admin via WhatsApp" link</action>
+      <!-- On Android 11+, if <queries> is configured correctly, this should launch com.whatsapp instead of opening a web fallback -->
+      <action>Verify that the WhatsApp application (or app chooser) is launched and visible</action>
+   </actions>
+</journey>

@@ -69,3 +69,29 @@ function debounce(func, wait) {
 }
 
 function printPage() { window.print(); }
+
+// FCM Token Handler from Flutter WebView
+window.onFcmToken = function(token) {
+    if (!token) return;
+    console.log("FCM Token received from Flutter:", token);
+    
+    // Find the base URL, assuming script is loaded from /assets/js/script.js
+    const scriptTag = document.querySelector('script[src*="assets/js/script.js"]');
+    let baseUrl = '/';
+    if (scriptTag) {
+        const src = scriptTag.getAttribute('src');
+        baseUrl = src.replace('assets/js/script.js', '');
+    }
+    
+    fetch(baseUrl + 'fcm/register_token.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ fcm_token: token })
+    })
+    .then(response => response.json())
+    .then(data => console.log("FCM Token Registration:", data))
+    .catch(error => console.error("Error registering FCM Token:", error));
+};

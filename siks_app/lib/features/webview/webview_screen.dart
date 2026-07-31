@@ -7,11 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/fcm_service.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/no_internet_page.dart';
-
 class WebViewScreen extends StatefulWidget {
   final String? initialUrl;
   const WebViewScreen({super.key, this.initialUrl});
@@ -23,6 +24,7 @@ class WebViewScreen extends StatefulWidget {
 class WebViewScreenState extends State<WebViewScreen> {
   late final WebViewController _controller;
   final ImagePicker _imagePicker = ImagePicker();
+  static const MethodChannel _waChannel = MethodChannel('id.smkalamin.siks/whatsapp');
 
   bool _isLoading = true;
   bool _hasError = false;
@@ -85,6 +87,8 @@ class WebViewScreenState extends State<WebViewScreen> {
           onMessageReceived: (_) => _showImageSourceDialog())
       ..addJavaScriptChannel('NotificationChannel',
           onMessageReceived: (_) => _sendFcmTokenToWeb())
+      ..addJavaScriptChannel('WhatsAppShareChannel',
+          onMessageReceived: (m) => _shareToWhatsAppNative(m.message))
       ..loadRequest(Uri.parse(startUrl));
   }
 
@@ -155,6 +159,39 @@ class WebViewScreenState extends State<WebViewScreen> {
     if (token != null) {
       await _controller.runJavaScript(
           "window.onFcmToken && window.onFcmToken('$token');");
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // WhatsApp Share Native
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _shareToWhatsAppNative(String message) async {
+    try {
+      final data = jsonDecode(message);
+      final base64Image = data['base64'];
+      final text = data['text'] ?? '';
+      var phone = data['phone'] ?? '';
+
+      // Clean phone number: remove non-digits
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      // Force start with 62 if starts with 0
+      if (phone.startsWith('0')) {
+        phone = '62${phone.substring(1)}';
+      }
+
+      // write base64 to temp file
+      final bytes = base64Decode(base64Image);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/kwitansi.png');
+      await file.writeAsBytes(bytes);
+
+      await _waChannel.invokeMethod('shareToWhatsApp', {
+        'imagePath': file.path,
+        'text': text,
+        'phone': phone,
+      });
+    } catch (e) {
+      debugPrint('[WebView] WA Share Error: $e');
     }
   }
 

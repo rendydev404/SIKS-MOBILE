@@ -56,7 +56,7 @@
         display: none !important;
     }
     
-    /* BOTTOM NAVIGATION BAR (MOBILE) */
+    /* BOTTOM NAVIGATION BAR (MOBILE) - Glassmorphism Premium */
     .bottom-nav {
         display: flex;
         justify-content: space-around;
@@ -69,9 +69,9 @@
         backdrop-filter: var(--glass-blur);
         -webkit-backdrop-filter: var(--glass-blur);
         border-top: 1px solid var(--glass-border);
-        padding: 10px 5px 15px 5px; /* iOS safe area spacing */
+        padding: 8px 5px calc(15px + env(safe-area-inset-bottom)); /* iOS safe area spacing */
         z-index: 1000;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
     }
 
     .bn-item {
@@ -83,14 +83,17 @@
         font-size: 11px;
         font-weight: 600;
         gap: 5px;
-        transition: all 0.3s ease;
-        padding: 5px 10px;
+        transition: var(--transition-bounce);
+        padding: 8px 10px;
         border-radius: 12px;
         flex: 1;
+        min-height: 48px; /* Touch target minimum */
+        position: relative;
     }
 
     .bn-item:hover, .bn-item.active {
         color: var(--primary-light);
+        transform: scale(1.05); /* Micro animation */
     }
     
     body.light-mode .bn-item:hover, body.light-mode .bn-item.active {

@@ -160,6 +160,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             
                             $pdo->commit();
+                            
+                            // FCM Notification to all Admins
+                            require_once '../includes/fcm_sender.php';
+                            $adminTokens = $pdo->query("SELECT fcm_token FROM users WHERE role = 'admin' AND fcm_token IS NOT NULL AND fcm_token != ''")->fetchAll(PDO::FETCH_COLUMN);
+                            if (!empty($adminTokens)) {
+                                $namaSiswa = $siswa['nama'] ?? 'Siswa';
+                                $title = "Pembayaran Baru";
+                                $body = "Pembayaran " . e($type) . " baru dari $namaSiswa (Rp " . number_format($jumlahBayarTotal, 0, ',', '.') . ") menunggu verifikasi.";
+                                foreach ($adminTokens as $token) {
+                                    sendFCMNotification($token, $title, $body);
+                                }
+                            }
+                            
                             $success = true;
                         } catch (PDOException $e) {
                             $pdo->rollBack();
