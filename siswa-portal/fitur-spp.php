@@ -190,7 +190,7 @@ include '../includes/header-siswa.php';
                         $cekTahunDatabase = $tahunFilter + 1;
                     }
                 
-                    $cek = cekPembayaran($pdo, $siswaId, $bulan, $cekTahunDatabase, 'SPP');
+                    $cek = cekPembayaran($pdo, $siswaId, $bulan, $cekTahunDatabase, 'SPP', (int)($siswa['tahun_masuk'] ?? 0));
                     $status = $cek['status']; // lunas, nyicil, belum
                     
                     // Prioritaskan status 'pending' jika ada transaksi pending bulan ini

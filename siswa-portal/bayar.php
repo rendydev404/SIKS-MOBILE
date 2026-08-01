@@ -48,7 +48,7 @@ $nominal      = getNominalPembayaran($pdo, $type, $lookupTahun);
 $sisaTagihanAwal  = $nominal; // default: belum bayar sama sekali
 $totalSudahBayar  = 0;
 if (!$isMonthly) {
-    $cekAwal = cekPembayaran($pdo, $siswaId, null, $tahunFromUrl, $type);
+    $cekAwal = cekPembayaran($pdo, $siswaId, null, $tahunFromUrl, $type, (int)($siswa['tahun_masuk'] ?? 0));
     $sisaTagihanAwal = $cekAwal['sisa'];
     $totalSudahBayar  = $cekAwal['total_dibayar'] + $cekAwal['total_pending'];
 }
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($isMonthly && in_array($bln, ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'])) {
                 $cekTahun++;
             }
-            $cekStatus = cekPembayaran($pdo, $siswaId, $bln, $cekTahun, $type);
+            $cekStatus = cekPembayaran($pdo, $siswaId, $bln, $cekTahun, $type, (int)($siswa['tahun_masuk'] ?? 0));
             if ($cekStatus['lunas']) {
                 $invalidBulan[] = $bln;
                 $validasiLolos = false;

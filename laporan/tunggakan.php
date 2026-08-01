@@ -61,7 +61,7 @@ foreach ($siswaList as $siswa) {
         }
 
         $bulan = $bulanList[$i];
-        $cek = cekPembayaran($pdo, $siswa['id'], $bulan, $tahun);
+        $cek = cekPembayaran($pdo, $siswa['id'], $bulan, $tahun, 'SPP', (int)($siswa['tahun_masuk'] ?? 0));
         if (!$cek['lunas']) {
             $tunggakan[] = $bulan;
         }

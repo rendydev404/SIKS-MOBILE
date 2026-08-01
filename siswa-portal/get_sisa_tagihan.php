@@ -46,9 +46,9 @@ if ($isMonthly) {
 $bulan = null; // tahunan tidak pakai bulan
 
 if ($isYearly && $tahun) {
-    $cek = cekPembayaran($pdo, $siswaId, $bulan, $tahun, $type);
+    $cek = cekPembayaran($pdo, $siswaId, $bulan, $tahun, $type, $angkatanSiswa);
 } else {
-    $cek = cekPembayaran($pdo, $siswaId, $bulan, null, $type);
+    $cek = cekPembayaran($pdo, $siswaId, $bulan, null, $type, $angkatanSiswa);
 }
 
 $totalLunas   = $cek['total_dibayar'];

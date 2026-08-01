@@ -147,7 +147,7 @@ include '../includes/header.php';
                             if ($lastStatus == 'pending'): ?>
                                 <span class="badge" style="background: var(--warning); color: #000;">Verifikasi Admin</span>
                             <?php else: 
-                                $cekBulan = cekPembayaran($pdo, $siswa['id'], $bulanName, $tahun);
+                                $cekBulan = cekPembayaran($pdo, $siswa['id'], $bulanName, $tahun, 'SPP', (int)($siswa['tahun_masuk'] ?? 0));
                                 if ($cekBulan['status'] == 'lunas'): ?>
                                     <span class="badge badge-success">Lunas</span>
                                 <?php elseif ($cekBulan['status'] == 'nyicil'): ?>
