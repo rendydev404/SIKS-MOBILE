@@ -370,7 +370,7 @@ foreach ($tunggakanSppList as $sppLabel) {
             <div class="signature-box">
                 <div>Mengetahui,</div>
                 <div>Keuangan SMK Al Amin</div>
-                <div class="signature-name">Memen Rohmatul Ummah S.Pd</div>
+                <div class="signature-name">Mira Humairoh</div>
             </div>
         </div>
     </div>
