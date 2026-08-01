@@ -48,8 +48,10 @@ class WebViewScreenState extends State<WebViewScreen> {
     Connectivity().onConnectivityChanged.listen((results) {
       if (!mounted) return;
       final offline = results.contains(ConnectivityResult.none);
-      setState(() => _isOffline = offline);
-      if (!offline && _hasError) _controller.reload();
+      if (_isOffline != offline) {
+        setState(() => _isOffline = offline);
+        if (!offline && _hasError) _controller.reload();
+      }
     });
   }
 
@@ -69,11 +71,12 @@ class WebViewScreenState extends State<WebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
-            if (mounted) setState(() { _isLoading = true; _hasError = false; });
+            if (mounted) setState(() { _hasError = false; });
           },
           onPageFinished: (_) {
             if (mounted) setState(() => _isLoading = false);
             _injectBridge();
+            _injectImageCaptureScript();
           },
           onWebResourceError: (_) {
             if (mounted) setState(() { _isLoading = false; _hasError = true; });
@@ -92,13 +95,25 @@ class WebViewScreenState extends State<WebViewScreen> {
       ..loadRequest(Uri.parse(startUrl));
   }
 
+  DateTime _lastWaShareTime = DateTime.fromMillisecondsSinceEpoch(0);
+
   // ─────────────────────────────────────────────────────────────────────────
   // Navigation delegate
   // ─────────────────────────────────────────────────────────────────────────
   NavigationDecision _handleNavigation(NavigationRequest req) {
     final url = req.url;
     for (final p in AppConstants.externalUrlPrefixes) {
-      if (url.startsWith(p)) { _launchExternal(url); return NavigationDecision.prevent; }
+      if (url.startsWith(p)) {
+        // Prevent URL Launcher if we just triggered the Native Image Share
+        if (url.contains('wa.me') || url.contains('api.whatsapp.com') || url.contains('whatsapp:')) {
+          if (DateTime.now().difference(_lastWaShareTime).inSeconds < 3) {
+            debugPrint('[WebView] Blocked URL Launcher WA because Native Share is in progress');
+            return NavigationDecision.prevent;
+          }
+        }
+        _launchExternal(url);
+        return NavigationDecision.prevent;
+      }
     }
     for (final ext in AppConstants.downloadExtensions) {
       if (url.toLowerCase().contains(ext)) { _downloadAndShare(url); return NavigationDecision.prevent; }
@@ -112,40 +127,119 @@ class WebViewScreenState extends State<WebViewScreen> {
   Future<void> _injectBridge() async {
     await _controller.runJavaScript(r'''
       (function() {
+        if (window._siksInitialized) return;
+        window._siksInitialized = true;
         document.body.classList.add('native-app-mode');
         window.isNativeApp = true;
 
-        // Intercept file inputs
-        function attachFileInputs() {
-          document.querySelectorAll('input[type="file"]').forEach(function(input) {
-            if (input._siksHooked) return;
-            input._siksHooked = true;
-            input.addEventListener('click', function(e) {
-              e.preventDefault();
-              e.stopPropagation();
-              window.CameraChannel.postMessage(input.getAttribute('accept') || 'image/*');
-            });
-          });
-        }
-        attachFileInputs();
-
-        // Observe DOM mutations for dynamically added inputs
-        var obs = new MutationObserver(attachFileInputs);
-        obs.observe(document.body, { childList: true, subtree: true });
-
-        // Intercept download links
-        document.querySelectorAll('a[href]').forEach(function(a) {
-          if (/\.(pdf|xlsx|xls|csv|doc|docx)(\?|$)/i.test(a.href)) {
-            a.addEventListener('click', function(e) {
-              e.preventDefault();
-              window.ShareChannel.postMessage(a.href);
-            });
+        // Use event delegation for file inputs
+        document.addEventListener('click', function(e) {
+          var target = e.target.closest('input[type="file"]');
+          if (target) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.CameraChannel.postMessage(target.getAttribute('accept') || 'image/*');
           }
-        });
+        }, true);
+
+        // Use event delegation for download links
+        document.addEventListener('click', function(e) {
+          var a = e.target.closest('a[href]');
+          if (a && /\.(pdf|xlsx|xls|csv|doc|docx)(\?|$)/i.test(a.href)) {
+            e.preventDefault();
+            window.ShareChannel.postMessage(a.href);
+          }
+        }, true);
 
         // Request FCM token
         if (window.NotificationChannel) {
           window.NotificationChannel.postMessage('request_token');
+        }
+      })();
+    ''');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Image Capture Injection (Intercept WA button)
+  // ─────────────────────────────────────────────────────────────────────────
+  void _injectImageCaptureScript() {
+    _controller.runJavaScript('''
+      (function() {
+        if (window._siksImageInjected) return;
+        window._siksImageInjected = true;
+
+        var btn = document.getElementById('copyAndWaBtn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                // STOP the website's original click handler so it doesn't run!
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                var card = document.getElementById('invoiceArea');
+                if (card) {
+                    var originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
+                    
+                    if (typeof html2canvas === 'undefined') {
+                        // Load html2canvas if not exists
+                        var script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                        script.onload = function() {
+                            captureAndSend(card, btn, originalText);
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        captureAndSend(card, btn, originalText);
+                    }
+                }
+                return false;
+            }, true); // Use capture phase to intercept before normal listeners
+        }
+
+        function captureAndSend(card, btn, originalText) {
+            html2canvas(card, {
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                logging: false
+            }).then(function(canvas) {
+                var base64 = canvas.toDataURL('image/png');
+                
+                // Get the WA link parameters
+                // Try to find the phone number and text from the PHP script if possible
+                var phone = "";
+                var text = "";
+                
+                // Try to grab the link from the original script fallback logic
+                // usually inside a window.location.href or similar
+                // We'll extract it directly from the html content if possible
+                var pageHtml = document.documentElement.innerHTML;
+                var waMatch = pageHtml.match(/https:\\/\\/wa\\.me\\/([0-9]+)\\?text=([^"']+)/);
+                if (waMatch && waMatch.length >= 3) {
+                    phone = waMatch[1];
+                    text = decodeURIComponent(waMatch[2].replace(/\\+/g, ' '));
+                }
+                
+                // Send to Flutter
+                if (window.WhatsAppShareChannel) {
+                    WhatsAppShareChannel.postMessage(JSON.stringify({
+                        base64: base64,
+                        phone: phone,
+                        text: text
+                    }));
+                }
+                
+                // Re-enable button
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }, 3000);
+            }).catch(function(err) {
+                console.error("Canvas error:", err);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
         }
       })();
     ''');
@@ -167,8 +261,12 @@ class WebViewScreenState extends State<WebViewScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Future<void> _shareToWhatsAppNative(String message) async {
     try {
+      _lastWaShareTime = DateTime.now();
+
       final data = jsonDecode(message);
-      final base64Image = data['base64'];
+      var base64Image = data['base64']?.toString() ?? '';
+      if (base64Image.isEmpty) throw Exception('Base64 image is kosong');
+      
       final text = data['text'] ?? '';
       var phone = data['phone'] ?? '';
 
@@ -179,11 +277,19 @@ class WebViewScreenState extends State<WebViewScreen> {
         phone = '62${phone.substring(1)}';
       }
 
+      // Strip data URI prefix if present (e.g. data:image/png;base64,...)
+      if (base64Image.contains(',')) {
+        base64Image = base64Image.split(',').last;
+      }
+      // Remove any whitespaces/newlines from base64
+      base64Image = base64Image.replaceAll(RegExp(r'\s+'), '');
+
       // write base64 to temp file
       final bytes = base64Decode(base64Image);
-      final dir = await getTemporaryDirectory();
+      // Use ApplicationDocumentsDirectory
+      final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/kwitansi.png');
-      await file.writeAsBytes(bytes);
+      await file.writeAsBytes(bytes, flush: true);
 
       await _waChannel.invokeMethod('shareToWhatsApp', {
         'imagePath': file.path,
@@ -192,6 +298,11 @@ class WebViewScreenState extends State<WebViewScreen> {
       });
     } catch (e) {
       debugPrint('[WebView] WA Share Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal WA: ${e.toString()}'),
+        ));
+      }
     }
   }
 
@@ -248,7 +359,7 @@ class WebViewScreenState extends State<WebViewScreen> {
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _imagePicker.pickImage(
-          source: source, imageQuality: 85, maxWidth: 1920);
+          source: source, imageQuality: 75, maxWidth: 1024);
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
@@ -358,7 +469,7 @@ class WebViewScreenState extends State<WebViewScreen> {
   Widget build(BuildContext context) {
     if (_isOffline) {
       return NoInternetPage(onRetry: () {
-        setState(() { _isOffline = false; _hasError = false; });
+        setState(() { _isOffline = false; _hasError = false; _isLoading = true; });
         _controller.reload();
       });
     }
@@ -373,7 +484,7 @@ class WebViewScreenState extends State<WebViewScreen> {
             if (_isLoading) const LoadingOverlay(),
             if (_hasError && !_isLoading)
               NoInternetPage(onRetry: () {
-                setState(() => _hasError = false);
+                setState(() { _hasError = false; _isLoading = true; });
                 _controller.reload();
               }),
           ],

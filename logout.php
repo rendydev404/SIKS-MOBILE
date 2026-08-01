@@ -7,5 +7,5 @@
 session_start();
 session_destroy();
 
-header('Location: ' . '/sppsmkalamin/');
+header('Location: index.php');
 exit;

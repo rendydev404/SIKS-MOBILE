@@ -56,6 +56,7 @@
                     localStorage.setItem('siks-theme', isLight ? 'light' : 'dark');
                 }
             }
+        });
     </script>
 </body>
 </html>

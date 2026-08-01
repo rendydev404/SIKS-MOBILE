@@ -19,3 +19,7 @@
 
 # Keep MainActivity
 -keep class id.smkalamin.siks.** { *; }
+
+# Ignore warnings for missing Play Core classes referenced by Flutter plugins
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }

@@ -20,8 +20,7 @@ class MainActivity : FlutterActivity() {
                 val phone = call.argument<String>("phone")
 
                 if (imagePath != null && text != null && phone != null) {
-                    shareToWhatsApp(imagePath, text, phone)
-                    result.success(null)
+                    shareToWhatsApp(imagePath, text, phone, result)
                 } else {
                     result.error("INVALID_ARGUMENTS", "Missing arguments", null)
                 }
@@ -31,10 +30,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun shareToWhatsApp(imagePath: String, text: String, phone: String) {
+    private fun shareToWhatsApp(imagePath: String, text: String, phone: String, result: io.flutter.plugin.common.MethodChannel.Result) {
         try {
-            val file = File(imagePath)
-            if (!file.exists()) return
+            val sourceFile = File(imagePath)
+            if (!sourceFile.exists()) {
+                result.error("FILE_NOT_FOUND", "Image file does not exist", null)
+                return
+            }
+
+            // Copy file to external files directory so WhatsApp has no permission issues reading it
+            val externalDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+            if (externalDir != null && !externalDir.exists()) {
+                externalDir.mkdirs()
+            }
+            val file = File(externalDir, "kwitansi_share.png")
+            sourceFile.copyTo(file, overwrite = true)
 
             val uri: Uri = FileProvider.getUriForFile(
                 this,
@@ -46,13 +56,41 @@ class MainActivity : FlutterActivity() {
             intent.type = "image/png"
             intent.putExtra(Intent.EXTRA_STREAM, uri)
             intent.putExtra(Intent.EXTRA_TEXT, text)
-            intent.putExtra("jid", "$phone@s.whatsapp.net")
-            intent.setPackage("com.whatsapp")
+            
+            // Add ClipData for Android 11+ URI permission
+            intent.clipData = android.content.ClipData.newRawUri("", uri)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
+            if (phone.isNotEmpty()) {
+                intent.putExtra("jid", "$phone@s.whatsapp.net")
+            }
+
+            // Check if WhatsApp is installed, fallback to WhatsApp Business
+            val pm = packageManager
+            var waPackage = "com.whatsapp"
+            var isInstalled = true
+            try {
+                pm.getPackageInfo(waPackage, android.content.pm.PackageManager.GET_META_DATA)
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                waPackage = "com.whatsapp.w4b"
+                try {
+                    pm.getPackageInfo(waPackage, android.content.pm.PackageManager.GET_META_DATA)
+                } catch (e2: android.content.pm.PackageManager.NameNotFoundException) {
+                    isInstalled = false
+                }
+            }
+
+            if (!isInstalled) {
+                result.error("APP_NOT_FOUND", "WhatsApp is not installed", null)
+                return
+            }
+
+            intent.setPackage(waPackage)
             startActivity(intent)
+            result.success(null)
         } catch (e: Exception) {
             e.printStackTrace()
+            result.error("SHARE_ERROR", e.message, null)
         }
     }
 }
