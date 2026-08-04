@@ -540,11 +540,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let tahun = tahunSelect.value;
         const allMonths = Array.from(monthCheckboxes).map(cb => cb.value).join(',');
 
-        fetch(`check_rejection.php?bulan=multi&blnlist=${encodeURIComponent(allMonths)}&tahun=${tahun}&jenis=${encodeURIComponent(typeJenis)}`)
+        fetch(`check_rejection.php?bulan=multi&blnlist=${encodeURIComponent(allMonths)}&tahun=${tahun}&jenis=${encodeURIComponent(typeJenis)}`, { credentials: 'same-origin' })
             .then(response => response.json())
             .then(data => {
                 // Reset akumulasi
-                sisaPerBulan = data.detail_multi;
+                sisaPerBulan = data.detail_multi || {};
                 updateTotalChecked();
                 
                 // Update styling tiap checkbox based on status lunas
