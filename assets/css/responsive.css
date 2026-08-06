@@ -326,3 +326,18 @@
         font-size: 20px;
     }
 }
+
+/* FIX: Teks sidebar dan bottom nav di versi mobile mode dark */
+body:not(.light-mode) .sidebar .nav-link,
+body:not(.light-mode) .sidebar .sidebar-header .logo,
+body:not(.light-mode) .sidebar .nav-section,
+body:not(.light-mode) .sidebar .sidebar-footer {
+    color: #ffffff !important;
+}
+
+body:not(.light-mode) .bn-item {
+    color: #f8fafc !important;
+}
+body:not(.light-mode) .bn-item.active {
+    color: #ffffff !important;
+}
