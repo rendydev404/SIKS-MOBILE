@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281259976325",
+    "project_id": "siks-3819e",
+    "storage_bucket": "siks-3819e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281259976325:android:4b634eb8a1874650e3abec",
+        "android_client_info": {
+          "package_name": "id.smkalamin.siks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMgagg4vN5WTIKTE1eb4C8aS7ZCXqFo_Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

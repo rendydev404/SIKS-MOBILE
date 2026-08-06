@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<journey name="SPP Payment and FCM Notification Flow">
+   <description>Verify that submitting a payment through the student portal triggers the success UI.</description>
+   <actions>
+      <action>Verify that the SPP Payment form is visible in the WebView</action>
+      <action>Tap the "Jumlah Bayar" input field</action>
+      <action>Type "150000" into the input</action>
+      <action>Tap the "Metode Pembayaran Transfer" radio option</action>
+      <!-- We assume a mock file is uploaded or we bypass upload strictly for this UI journey -->
+      <action>Tap the "Kirim Pembayaran" button</action>
+      <action>Verify that the "Pembayaran Diproses" success modal is visible on screen</action>
+   </actions>
+</journey>

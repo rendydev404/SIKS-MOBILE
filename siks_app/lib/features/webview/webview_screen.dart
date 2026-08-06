@@ -1,0 +1,495 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../core/constants.dart';
+import '../../core/fcm_service.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/no_internet_page.dart';
+class WebViewScreen extends StatefulWidget {
+  final String? initialUrl;
+  const WebViewScreen({super.key, this.initialUrl});
+
+  @override
+  State<WebViewScreen> createState() => WebViewScreenState();
+}
+
+class WebViewScreenState extends State<WebViewScreen> {
+  late final WebViewController _controller;
+  final ImagePicker _imagePicker = ImagePicker();
+  static const MethodChannel _waChannel = MethodChannel('id.smkalamin.siks/whatsapp');
+
+  bool _isLoading = true;
+  bool _hasError = false;
+  bool _isOffline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+    _initWebView();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Connectivity
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _checkConnectivity() async {
+    final result = await Connectivity().checkConnectivity();
+    if (mounted) {
+      setState(() => _isOffline = result.contains(ConnectivityResult.none));
+    }
+    Connectivity().onConnectivityChanged.listen((results) {
+      if (!mounted) return;
+      final offline = results.contains(ConnectivityResult.none);
+      if (_isOffline != offline) {
+        setState(() => _isOffline = offline);
+        if (!offline && _hasError) _controller.reload();
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Init WebView
+  // ─────────────────────────────────────────────────────────────────────────
+  void _initWebView() {
+    final startUrl = widget.initialUrl ?? AppConstants.baseUrl;
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF0f172a))
+      ..setUserAgent(
+        'Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 '
+        '${AppConstants.userAgentSuffix}',
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() { _hasError = false; });
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+            _injectBridge();
+            _injectImageCaptureScript();
+          },
+          onWebResourceError: (_) {
+            if (mounted) setState(() { _isLoading = false; _hasError = true; });
+          },
+          onNavigationRequest: _handleNavigation,
+        ),
+      )
+      ..addJavaScriptChannel('ShareChannel',
+          onMessageReceived: (m) => _downloadAndShare(m.message))
+      ..addJavaScriptChannel('CameraChannel',
+          onMessageReceived: (_) => _showImageSourceDialog())
+      ..addJavaScriptChannel('NotificationChannel',
+          onMessageReceived: (_) => _sendFcmTokenToWeb())
+      ..addJavaScriptChannel('WhatsAppShareChannel',
+          onMessageReceived: (m) => _shareToWhatsAppNative(m.message))
+      ..loadRequest(Uri.parse(startUrl));
+  }
+
+  DateTime _lastWaShareTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Navigation delegate
+  // ─────────────────────────────────────────────────────────────────────────
+  NavigationDecision _handleNavigation(NavigationRequest req) {
+    final url = req.url;
+    for (final p in AppConstants.externalUrlPrefixes) {
+      if (url.startsWith(p)) {
+        // Prevent URL Launcher if we just triggered the Native Image Share
+        if (url.contains('wa.me') || url.contains('api.whatsapp.com') || url.contains('whatsapp:')) {
+          if (DateTime.now().difference(_lastWaShareTime).inSeconds < 3) {
+            debugPrint('[WebView] Blocked URL Launcher WA because Native Share is in progress');
+            return NavigationDecision.prevent;
+          }
+        }
+        _launchExternal(url);
+        return NavigationDecision.prevent;
+      }
+    }
+    for (final ext in AppConstants.downloadExtensions) {
+      if (url.toLowerCase().contains(ext)) { _downloadAndShare(url); return NavigationDecision.prevent; }
+    }
+    return NavigationDecision.navigate;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // JS Bridge injection
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _injectBridge() async {
+    await _controller.runJavaScript(r'''
+      (function() {
+        if (window._siksInitialized) return;
+        window._siksInitialized = true;
+        document.body.classList.add('native-app-mode');
+        window.isNativeApp = true;
+
+        // Use event delegation for file inputs
+        document.addEventListener('click', function(e) {
+          var target = e.target.closest('input[type="file"]');
+          if (target) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.CameraChannel.postMessage(target.getAttribute('accept') || 'image/*');
+          }
+        }, true);
+
+        // Use event delegation for download links
+        document.addEventListener('click', function(e) {
+          var a = e.target.closest('a[href]');
+          if (a && /\.(pdf|xlsx|xls|csv|doc|docx)(\?|$)/i.test(a.href)) {
+            e.preventDefault();
+            window.ShareChannel.postMessage(a.href);
+          }
+        }, true);
+
+        // Request FCM token
+        if (window.NotificationChannel) {
+          window.NotificationChannel.postMessage('request_token');
+        }
+      })();
+    ''');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Image Capture Injection (Intercept WA button)
+  // ─────────────────────────────────────────────────────────────────────────
+  void _injectImageCaptureScript() {
+    _controller.runJavaScript('''
+      (function() {
+        if (window._siksImageInjected) return;
+        window._siksImageInjected = true;
+
+        var btn = document.getElementById('copyAndWaBtn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                // STOP the website's original click handler so it doesn't run!
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                var card = document.getElementById('invoiceArea');
+                if (card) {
+                    var originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
+                    
+                    if (typeof html2canvas === 'undefined') {
+                        // Load html2canvas if not exists
+                        var script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                        script.onload = function() {
+                            captureAndSend(card, btn, originalText);
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        captureAndSend(card, btn, originalText);
+                    }
+                }
+                return false;
+            }, true); // Use capture phase to intercept before normal listeners
+        }
+
+        function captureAndSend(card, btn, originalText) {
+            html2canvas(card, {
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                logging: false
+            }).then(function(canvas) {
+                var base64 = canvas.toDataURL('image/png');
+                
+                // Get the WA link parameters
+                // Try to find the phone number and text from the PHP script if possible
+                var phone = "";
+                var text = "";
+                
+                // Try to grab the link from the original script fallback logic
+                // usually inside a window.location.href or similar
+                // We'll extract it directly from the html content if possible
+                var pageHtml = document.documentElement.innerHTML;
+                var waMatch = pageHtml.match(/https:\\/\\/wa\\.me\\/([0-9]+)\\?text=([^"']+)/);
+                if (waMatch && waMatch.length >= 3) {
+                    phone = waMatch[1];
+                    text = decodeURIComponent(waMatch[2].replace(/\\+/g, ' '));
+                }
+                
+                // Send to Flutter
+                if (window.WhatsAppShareChannel) {
+                    WhatsAppShareChannel.postMessage(JSON.stringify({
+                        base64: base64,
+                        phone: phone,
+                        text: text
+                    }));
+                }
+                
+                // Re-enable button
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }, 3000);
+            }).catch(function(err) {
+                console.error("Canvas error:", err);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+        }
+      })();
+    ''');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FCM token → web
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _sendFcmTokenToWeb() async {
+    final token = await FcmService.instance.currentToken;
+    if (token != null) {
+      await _controller.runJavaScript(
+          "window.onFcmToken && window.onFcmToken('$token');");
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // WhatsApp Share Native
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _shareToWhatsAppNative(String message) async {
+    try {
+      _lastWaShareTime = DateTime.now();
+
+      final data = jsonDecode(message);
+      var base64Image = data['base64']?.toString() ?? '';
+      if (base64Image.isEmpty) throw Exception('Base64 image is kosong');
+      
+      final text = data['text'] ?? '';
+      var phone = data['phone'] ?? '';
+
+      // Clean phone number: remove non-digits
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      // Force start with 62 if starts with 0
+      if (phone.startsWith('0')) {
+        phone = '62${phone.substring(1)}';
+      }
+
+      // Strip data URI prefix if present (e.g. data:image/png;base64,...)
+      if (base64Image.contains(',')) {
+        base64Image = base64Image.split(',').last;
+      }
+      // Remove any whitespaces/newlines from base64
+      base64Image = base64Image.replaceAll(RegExp(r'\s+'), '');
+
+      // write base64 to temp file
+      final bytes = base64Decode(base64Image);
+      // Use ApplicationDocumentsDirectory
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/kwitansi.png');
+      await file.writeAsBytes(bytes, flush: true);
+
+      await _waChannel.invokeMethod('shareToWhatsApp', {
+        'imagePath': file.path,
+        'text': text,
+        'phone': phone,
+      });
+    } catch (e) {
+      debugPrint('[WebView] WA Share Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal WA: ${e.toString()}'),
+        ));
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Image picker
+  // ─────────────────────────────────────────────────────────────────────────
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1e293b),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const Text('Pilih Sumber Gambar',
+                style: TextStyle(color: Colors.white, fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: Color(0xFF6366f1)),
+              title: const Text('Kamera',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: Color(0xFF6366f1)),
+              title: const Text('Galeri',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+          source: source, imageQuality: 75, maxWidth: 1024);
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final b64 = base64Encode(bytes);
+
+      await _controller.runJavaScript('''
+        (function() {
+          var b64 = "$b64";
+          var byteStr = atob(b64);
+          var ab = new ArrayBuffer(byteStr.length);
+          var ia = new Uint8Array(ab);
+          for (var i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+          var blob = new Blob([ab], {type: "image/jpeg"});
+          var file = new File([blob], "bukti_transfer.jpg", {type: "image/jpeg"});
+          var dt = new DataTransfer();
+          dt.items.add(file);
+          var input = document.querySelector('input[type="file"]');
+          if (input) {
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        })();
+      ''');
+    } catch (e) {
+      debugPrint('[WebView] Image pick error: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Download & Share
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _downloadAndShare(String url) async {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Row(children: [
+        SizedBox(width: 16, height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+        SizedBox(width: 12),
+        Text('Menyiapkan file...'),
+      ]),
+      duration: Duration(seconds: 30),
+    ));
+    try {
+      final file = await DefaultCacheManager().getSingleFile(url);
+      messenger.hideCurrentSnackBar();
+      await Share.shareXFiles([XFile(file.path)],
+          text: 'Laporan SIKS SMK Al Amin');
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text('Gagal: $e')));
+    }
+  }
+
+  Future<void> _launchExternal(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('[WebView] Launch error: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Public: navigate from outside (FCM / deep link)
+  // ─────────────────────────────────────────────────────────────────────────
+  void navigateTo(String url) =>
+      _controller.loadRequest(Uri.parse(url));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Back button
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<bool> _onWillPop() async {
+    if (await _controller.canGoBack()) {
+      _controller.goBack();
+      return false;
+    }
+    final exit = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1e293b),
+        title: const Text('Keluar App?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Yakin ingin keluar dari SIKS Al Amin?',
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Keluar',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    return exit ?? false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    if (_isOffline) {
+      return NoInternetPage(onRetry: () {
+        setState(() { _isOffline = false; _hasError = false; _isLoading = true; });
+        _controller.reload();
+      });
+    }
+
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0f172a),
+        body: Stack(
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_isLoading) const LoadingOverlay(),
+            if (_hasError && !_isLoading)
+              NoInternetPage(onRetry: () {
+                setState(() { _hasError = false; _isLoading = true; });
+                _controller.reload();
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+}

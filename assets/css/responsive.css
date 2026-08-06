@@ -1,0 +1,328 @@
+/* MOBILE RESPONSIVE STYLES */
+
+/* HIDE BOTTOM NAV ON DESKTOP BY DEFAULT */
+.bottom-nav {
+    display: none;
+}
+
+/* GENERIC HORIZONTAL SCROLL FOR TABS/BUTTONS ON MOBILE */
+.mobile-scroll-x {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+.mobile-scroll-x::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+.mobile-scroll-x > * {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+    /* SIDEBAR TOGGLE */
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: none;
+        width: 250px;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+
+    /* OVERLAY */
+    .sidebar.active::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 250px;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 90;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding-bottom: 80px !important;
+    }
+
+    .menu-toggle {
+        display: none !important;
+    }
+    
+    /* BOTTOM NAVIGATION BAR (MOBILE) - Glassmorphism Premium */
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border-top: 1px solid var(--glass-border);
+        padding: 8px 5px calc(15px + env(safe-area-inset-bottom)); /* iOS safe area spacing */
+        z-index: 1000;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+    }
+
+    .bn-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+        gap: 5px;
+        transition: var(--transition-bounce);
+        padding: 8px 10px;
+        border-radius: 12px;
+        flex: 1;
+        min-height: 48px; /* Touch target minimum */
+        position: relative;
+    }
+
+    .bn-item:hover, .bn-item.active {
+        color: var(--primary-light);
+        transform: scale(1.05); /* Micro animation */
+    }
+    
+    body.light-mode .bn-item:hover, body.light-mode .bn-item.active {
+        color: var(--primary);
+    }
+
+    .bn-item i {
+        font-size: 20px;
+        margin-bottom: 2px;
+        transition: transform 0.2s ease;
+    }
+    
+    .bn-item.active i {
+        transform: translateY(-3px);
+    }
+
+    .bn-icon-wrap {
+        position: relative;
+    }
+
+    .bn-badge {
+        position: absolute;
+        top: -6px;
+        right: -10px;
+        background: var(--danger);
+        color: white;
+        font-size: 9px;
+        padding: 2px 5px;
+        border-radius: 10px;
+        border: 2px solid var(--bg-card);
+    }
+
+    body.light-mode .bn-badge {
+        border-color: white;
+    }
+
+    .sidebar {
+        z-index: 1001 !important; /* Above bottom nav */
+    }
+    
+    /* TOOLBAR & FORMS */
+    .toolbar, .riwayat-toolbar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+    
+    .riwayat-toolbar form, .riwayat-toolbar .btn {
+        width: 100% !important;
+    }
+    
+    .riwayat-toolbar form {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    
+    .filter-group,
+    .filter-group form {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    
+    .filter-group select, 
+    .filter-group input,
+    .filter-group button {
+        width: 100% !important;
+    }
+    
+    /* HEADER */
+    .header-right {
+        gap: 10px;
+    }
+    
+    .user-name {
+        display: none;
+    }
+    
+    /* STUDENT PORTAL HEADER */
+    .siswa-portal-header {
+        padding: 15px !important;
+        flex-direction: column;
+        gap: 15px;
+        height: auto;
+    }
+    
+    .brand-section {
+        margin-bottom: 0;
+        text-align: center;
+        width: 100%;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        display: flex;
+    }
+    
+    .action-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    /* HIDE TEXT IN BUTTONS ON MOBILE */
+    .action-btn span {
+        display: none; 
+    }
+    .action-btn i {
+        margin: 0;
+    }
+
+    /* GRIDS & CARDS */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .row {
+        display: block !important;
+    }
+
+    .row > div {
+        width: 100% !important;
+        margin-bottom: 15px;
+        min-width: 0 !important;
+    }
+    
+    .modal-content {
+        width: 95% !important;
+        margin: 10px auto;
+    }
+
+    /* TABLES - MOBILE HORIZONTAL SCROLL */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .table-responsive .table {
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+    
+    .table-responsive .table th,
+    .table-responsive .table td {
+        padding: 12px 15px;
+    }
+
+    /* MONTH FLOW (SPP Portal) - THE SWIPE FEATURE */
+    .month-flow {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        gap: 12px;
+        padding-bottom: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) transparent;
+        padding: 5px;
+    }
+
+    .month-flow::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .month-flow::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 10px;
+    }
+
+    .month-node {
+        flex: 0 0 110px !important; /* Fixed width to force horizontal scroll */
+        min-width: 110px !important;
+    }
+
+    /* ACADEMIC GRIDS (Tambah/Edit Siswa) */
+    #akademikTahunanGrid, 
+    #daftarUlangGrid,
+    #historyContainer,
+    .academic-grid,
+    .history-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .migrate-box {
+        padding: 12px !important;
+    }
+
+    /* GENERAL MOBILE TWEAKS */
+    .content-wrapper {
+        padding: 12px !important;
+    }
+
+    .card {
+        border-radius: var(--radius-md) !important;
+    }
+    
+    .card-body {
+        padding: 15px !important;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    /* LOGIN PAGE */
+    .login-box {
+        padding: 30px 20px;
+        max-width: 100%;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 16px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+}
