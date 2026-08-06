@@ -91,7 +91,11 @@ body.light-mode .page-title { color: #1e293b; }
 body.light-mode .user-name { color: #1e293b; }
 body.light-mode .btn-logout { color: #64748b; }
 body.light-mode .btn-logout:hover { color: #ef4444; }
-body.light-mode .sidebar-footer { background: rgba(0,0,0,0.15); }
+body.light-mode .sidebar-footer { background: rgba(0,0,0,0.15); color: #cbd5e1; }
+body.light-mode .sidebar-header .logo { color: #f8fafc; }
+body.light-mode .nav-link { color: #cbd5e1; }
+body.light-mode .nav-link:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
+body.light-mode .nav-link.active { color: white; }
 
 /* ── Cards ── */
 body.light-mode .card { background: #fff; border-color: #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
