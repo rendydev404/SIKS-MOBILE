@@ -26,9 +26,17 @@ class WebViewScreenState extends State<WebViewScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   static const MethodChannel _waChannel = MethodChannel('id.smkalamin.siks/whatsapp');
 
-  bool _isLoading = true;
-  bool _hasError = false;
-  bool _isOffline = false;
+  final ValueNotifier<bool> _isLoading = ValueNotifier(true);
+  final ValueNotifier<bool> _hasError = ValueNotifier(false);
+  final ValueNotifier<bool> _isOffline = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _isLoading.dispose();
+    _hasError.dispose();
+    _isOffline.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -43,14 +51,14 @@ class WebViewScreenState extends State<WebViewScreen> {
   Future<void> _checkConnectivity() async {
     final result = await Connectivity().checkConnectivity();
     if (mounted) {
-      setState(() => _isOffline = result.contains(ConnectivityResult.none));
+      _isOffline.value = result.contains(ConnectivityResult.none);
     }
     Connectivity().onConnectivityChanged.listen((results) {
       if (!mounted) return;
       final offline = results.contains(ConnectivityResult.none);
-      if (_isOffline != offline) {
-        setState(() => _isOffline = offline);
-        if (!offline && _hasError) _controller.reload();
+      if (_isOffline.value != offline) {
+        _isOffline.value = offline;
+        if (!offline && _hasError.value) _controller.reload();
       }
     });
   }
@@ -71,15 +79,18 @@ class WebViewScreenState extends State<WebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
-            if (mounted) setState(() { _hasError = false; });
+            if (mounted) _hasError.value = false;
           },
           onPageFinished: (_) {
-            if (mounted) setState(() => _isLoading = false);
+            if (mounted) _isLoading.value = false;
             _injectBridge();
             _injectImageCaptureScript();
           },
           onWebResourceError: (_) {
-            if (mounted) setState(() { _isLoading = false; _hasError = true; });
+            if (mounted) {
+              _isLoading.value = false;
+              _hasError.value = true;
+            }
           },
           onNavigationRequest: _handleNavigation,
         ),
@@ -434,11 +445,12 @@ class WebViewScreenState extends State<WebViewScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   // Back button
   // ─────────────────────────────────────────────────────────────────────────
-  Future<bool> _onWillPop() async {
+  Future<void> _handlePop() async {
     if (await _controller.canGoBack()) {
       _controller.goBack();
-      return false;
+      return;
     }
+    if (!mounted) return;
     final exit = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -459,7 +471,9 @@ class WebViewScreenState extends State<WebViewScreen> {
         ],
       ),
     );
-    return exit ?? false;
+    if (exit == true) {
+      SystemNavigator.pop();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -467,26 +481,50 @@ class WebViewScreenState extends State<WebViewScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    if (_isOffline) {
-      return NoInternetPage(onRetry: () {
-        setState(() { _isOffline = false; _hasError = false; _isLoading = true; });
-        _controller.reload();
-      });
-    }
-
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        await _handlePop();
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFF0f172a),
         body: Stack(
           children: [
             WebViewWidget(controller: _controller),
-            if (_isLoading) const LoadingOverlay(),
-            if (_hasError && !_isLoading)
-              NoInternetPage(onRetry: () {
-                setState(() { _hasError = false; _isLoading = true; });
-                _controller.reload();
-              }),
+            ValueListenableBuilder<bool>(
+              valueListenable: _isOffline,
+              builder: (context, isOffline, child) {
+                if (isOffline) {
+                  return NoInternetPage(onRetry: () {
+                    _isOffline.value = false;
+                    _hasError.value = false;
+                    _isLoading.value = true;
+                    _controller.reload();
+                  });
+                }
+                return ValueListenableBuilder<bool>(
+                  valueListenable: _hasError,
+                  builder: (context, hasError, child) {
+                    if (hasError) {
+                      return NoInternetPage(onRetry: () {
+                        _hasError.value = false;
+                        _isLoading.value = true;
+                        _controller.reload();
+                      });
+                    }
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: _isLoading,
+                      builder: (context, isLoading, child) {
+                        return isLoading
+                            ? const LoadingOverlay()
+                            : const SizedBox.shrink();
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),
