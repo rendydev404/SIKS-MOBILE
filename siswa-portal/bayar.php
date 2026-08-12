@@ -7,6 +7,8 @@
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/fcm_sender.php';
+require_once '../includes/announcement_notifications.php';
+ensureAnnouncementNotificationSchema($pdo);
 
 // Cek login siswa
 if (!isset($_SESSION['siswa_id'])) {
@@ -186,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Notifikasi FCM
                         if ($isDbSuccess) {
                             try {
-                                $adminTokens = $pdo->query("SELECT fcm_token FROM users WHERE role = 'admin' AND fcm_token IS NOT NULL AND fcm_token != ''")->fetchAll(PDO::FETCH_COLUMN);
+                                $adminTokens = $pdo->query("SELECT d.fcm_token FROM fcm_devices d INNER JOIN users u ON u.id = d.user_id WHERE d.owner_type = 'user' AND d.is_active = 1 AND u.role = 'admin' AND u.status = 'aktif'")->fetchAll(PDO::FETCH_COLUMN);
                                 if (!empty($adminTokens)) {
                                     $namaSiswa = $siswa['nama'] ?? 'Siswa';
                                     $title = "Pembayaran Baru";

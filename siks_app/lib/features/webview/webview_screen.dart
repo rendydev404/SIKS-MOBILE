@@ -42,6 +42,7 @@ class WebViewScreenState extends State<WebViewScreen> {
 
   @override
   void dispose() {
+    FcmService.instance.onTokenAvailable = null;
     _isLoading.dispose();
     _hasError.dispose();
     _isOffline.dispose();
@@ -52,6 +53,7 @@ class WebViewScreenState extends State<WebViewScreen> {
   @override
   void initState() {
     super.initState();
+    FcmService.instance.onTokenAvailable = (_) => unawaited(_sendFcmTokenToWeb());
     _checkConnectivity();
     _initWebView();
   }
@@ -97,6 +99,7 @@ class WebViewScreenState extends State<WebViewScreen> {
             _hasCompletedInitialLoad = true;
             if (mounted) _isLoading.value = false;
             _injectBridge();
+            unawaited(_sendFcmTokenToWeb());
             _injectImageCaptureScript();
             if (!_reportedFirstPageFinished) {
               _reportedFirstPageFinished = true;
@@ -297,10 +300,22 @@ class WebViewScreenState extends State<WebViewScreen> {
   // FCM token → web
   // ─────────────────────────────────────────────────────────────────────────
   Future<void> _sendFcmTokenToWeb() async {
+    // The registration endpoint relies on the current WebView login cookie.
+    // A token arriving before the first page is loaded is sent onPageFinished.
+    if (!_hasCompletedInitialLoad) return;
     final token = await FcmService.instance.currentToken;
     if (token != null) {
-      await _controller.runJavaScript(
-          "window.onFcmToken && window.onFcmToken('$token');");
+      final encodedToken = jsonEncode(token);
+      await _controller.runJavaScript('''
+        (function() {
+          var token = $encodedToken;
+          fetch('/fcm/register_token.php', {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({fcm_token: token, platform: 'android'})
+          }).catch(function(error) { console.debug('FCM token registration failed', error); });
+        })();
+      ''');
     }
   }
 

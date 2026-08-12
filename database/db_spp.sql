@@ -93,7 +93,47 @@ CREATE TABLE `pengumuman` (
   `isi` text NOT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_by` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `notification_queued_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Perangkat FCM per akun; token hanya boleh dimiliki satu akun pada satu waktu.
+CREATE TABLE `fcm_devices` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `token_hash` char(64) NOT NULL,
+  `fcm_token` text NOT NULL,
+  `owner_type` enum('siswa','user') NOT NULL,
+  `siswa_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `platform` varchar(32) NOT NULL DEFAULT 'android',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `last_seen_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_fcm_token_hash` (`token_hash`),
+  KEY `idx_fcm_devices_siswa` (`siswa_id`,`is_active`),
+  KEY `idx_fcm_devices_user` (`user_id`,`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Satu baris menjamin satu pengiriman pengumuman untuk satu perangkat.
+CREATE TABLE `announcement_notification_deliveries` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pengumuman_id` int(11) NOT NULL,
+  `device_id` bigint(20) unsigned NOT NULL,
+  `status` enum('pending','processing','retry','sent','failed') NOT NULL DEFAULT 'pending',
+  `attempts` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `next_attempt_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `locked_at` datetime DEFAULT NULL,
+  `lock_token` char(36) DEFAULT NULL,
+  `last_error` text DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_announcement_device` (`pengumuman_id`,`device_id`),
+  KEY `idx_delivery_worker` (`status`,`next_attempt_at`),
+  KEY `idx_delivery_lock` (`lock_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

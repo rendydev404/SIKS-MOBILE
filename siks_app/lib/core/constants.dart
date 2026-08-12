@@ -9,9 +9,6 @@ class AppConstants {
   static const String siswaPortalUrl =
       'https://sikssmkalamin.absensismkalamin.my.id/siswa-portal/';
 
-  static const String fcmRegisterUrl =
-      'https://sikssmkalamin.absensismkalamin.my.id/fcm/register_token.php';
-
   // ─── App Info ────────────────────────────────────────────────────────────
   static const String appName = 'SIKS Al Amin';
   static const String packageName = 'id.smkalamin.siks';

@@ -6,6 +6,7 @@
  */
 
 require_once 'database.php';
+require_once __DIR__ . '/../includes/announcement_notifications.php';
 
 // Fungsi untuk cek dan update database
 function autoUpdateDatabase($pdo) {
@@ -44,6 +45,9 @@ function autoUpdateDatabase($pdo) {
                 FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
             ) ENGINE=InnoDB");
         }
+
+        // 4b. Device registry and reliable announcement-delivery queue.
+        ensureAnnouncementNotificationSchema($pdo);
         
         // 5. Update tahun ajaran ke 2025/2026 jika belum ada
         $tahun = $pdo->query("SELECT * FROM tahun_ajaran WHERE tahun = '2025/2026'")->fetch();
@@ -118,7 +122,7 @@ function autoUpdateDatabase($pdo) {
 }
 
 // Jalankan auto update sekali per session (Versioning untuk memaksa update)
-if (!isset($_SESSION['db_updated_v2'])) {
+if (!isset($_SESSION['db_updated_v3'])) {
     autoUpdateDatabase($pdo);
-    $_SESSION['db_updated_v2'] = true;
+    $_SESSION['db_updated_v3'] = true;
 }

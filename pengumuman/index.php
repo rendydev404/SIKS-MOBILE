@@ -6,8 +6,10 @@
 
 require_once '../config/database.php';
 require_once '../includes/functions.php';
+require_once '../includes/announcement_notifications.php';
 checkLogin();
 checkRole(['admin']);
+ensureAnnouncementNotificationSchema($pdo);
 
 $pageTitle = 'Pengumuman';
 
@@ -21,16 +23,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($judul) && !empty($isi)) {
         try {
+            $pdo->beginTransaction();
+            $announcementId = null;
             if ($action === 'edit' && $id) {
+                $previous = $pdo->prepare('SELECT is_active FROM pengumuman WHERE id = ? FOR UPDATE');
+                $previous->execute([$id]);
+                $oldAnnouncement = $previous->fetch();
+                if (!$oldAnnouncement) throw new PDOException('Pengumuman tidak ditemukan');
                 $stmt = $pdo->prepare("UPDATE pengumuman SET judul = ?, isi = ?, is_active = ? WHERE id = ?");
                 $stmt->execute([$judul, $isi, $isActive, $id]);
-                setAlert('success', 'Pengumuman berhasil diperbarui!');
+                $announcementId = (int) $id;
+                $isNewlyPublished = !$oldAnnouncement['is_active'] && $isActive;
+                $message = 'Pengumuman berhasil diperbarui!';
             } else {
                 $stmt = $pdo->prepare("INSERT INTO pengumuman (judul, isi, is_active, created_by) VALUES (?, ?, ?, ?)");
                 $stmt->execute([$judul, $isi, $isActive, $_SESSION['user_id']]);
-                setAlert('success', 'Pengumuman berhasil ditambahkan!');
+                $announcementId = (int) $pdo->lastInsertId();
+                $isNewlyPublished = (bool) $isActive;
+                $message = 'Pengumuman berhasil ditambahkan!';
             }
+            if ($isNewlyPublished) {
+                $queued = queueAnnouncementNotification($pdo, $announcementId);
+                $message .= ' Notifikasi untuk ' . $queued . ' perangkat siswa telah masuk antrean.';
+            }
+            $pdo->commit();
+            setAlert('success', $message);
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             setAlert('error', 'Gagal menyimpan: ' . $e->getMessage());
         }
     } else {
