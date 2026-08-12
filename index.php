@@ -29,6 +29,7 @@ if (isset($_SESSION['siswa_id'])) {
 }
 
 $error = '';
+$isNativeApp = stripos($_SERVER['HTTP_USER_AGENT'] ?? '', 'SIKSApp/') !== false;
 
 // Proses Login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -172,16 +173,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
 
-            <div class="app-download">
-                <a href="downloads/siks-al-amin.apk" class="btn btn-secondary btn-block" download>
-                    <i class="fab fa-android" aria-hidden="true"></i>
-                    Download Aplikasi Android
-                </a>
-                <p class="app-download__hint">
-                    <i class="fas fa-info-circle" aria-hidden="true"></i>
-                    Khusus Android. Izinkan instalasi dari sumber ini jika diminta.
-                </p>
-            </div>
+            <?php if (!$isNativeApp): ?>
+                <div class="app-download">
+                    <a href="downloads/siks-al-amin.apk" class="btn btn-secondary btn-block" download>
+                        <i class="fab fa-android" aria-hidden="true"></i>
+                        Download Aplikasi Android
+                    </a>
+                    <p class="app-download__hint">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        Khusus Android. Izinkan instalasi dari sumber ini jika diminta.
+                    </p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
