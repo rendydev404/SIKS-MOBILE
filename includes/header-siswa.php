@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e293b">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f5f9">
+    <meta name="theme-color" content="#f1f5f9">
     <title><?= $pageTitle ?> - SIKS SMK Al Amin</title>
     <script>
         if (navigator.userAgent.indexOf('SIKSApp/') !== -1) {
@@ -99,10 +98,10 @@
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
     <script>
-        // Apply saved theme instantly
-        if(localStorage.getItem('siks-theme') === 'light') document.body.classList.add('light-mode');
+        // Light is the default; retain dark mode only when the user explicitly chose it.
+        if (localStorage.getItem('siks-theme') === 'dark') document.body.classList.remove('light-mode');
         
         // Global toggle function
         function toggleSiksTheme() {

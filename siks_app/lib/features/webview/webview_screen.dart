@@ -81,7 +81,7 @@ class WebViewScreenState extends State<WebViewScreen> {
     final startUrl = widget.initialUrl ?? AppConstants.baseUrl;
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0f172a))
+      ..setBackgroundColor(const Color(0xFFF8FAFC))
       ..setUserAgent(
         'Mozilla/5.0 (Linux; Android 11; Mobile) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 '
@@ -360,7 +360,7 @@ class WebViewScreenState extends State<WebViewScreen> {
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1e293b),
+      backgroundColor: const Color(0xFFFFFFFF),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -370,18 +370,18 @@ class WebViewScreenState extends State<WebViewScreen> {
             Container(
               width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(2)),
             ),
             const Text('Pilih Sumber Gambar',
-                style: TextStyle(color: Colors.white, fontSize: 16,
+                style: TextStyle(color: Color(0xFF0F172A), fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded,
                   color: Color(0xFF6366f1)),
               title: const Text('Kamera',
-                  style: TextStyle(color: Colors.white)),
+                  style: TextStyle(color: Color(0xFF0F172A))),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
@@ -391,7 +391,7 @@ class WebViewScreenState extends State<WebViewScreen> {
               leading: const Icon(Icons.photo_library_rounded,
                   color: Color(0xFF6366f1)),
               title: const Text('Galeri',
-                  style: TextStyle(color: Colors.white)),
+                  style: TextStyle(color: Color(0xFF0F172A))),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
@@ -494,12 +494,12 @@ class WebViewScreenState extends State<WebViewScreen> {
     final exit = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1e293b),
+        backgroundColor: const Color(0xFFFFFFFF),
         title: const Text('Keluar App?',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: Color(0xFF0F172A))),
         content: const Text(
             'Yakin ingin keluar dari SIKS Al Amin?',
-            style: TextStyle(color: Colors.white70)),
+            style: TextStyle(color: Color(0xFF475569))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -528,7 +528,7 @@ class WebViewScreenState extends State<WebViewScreen> {
         await _handlePop();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0f172a),
+        backgroundColor: const Color(0xFFF8FAFC),
         body: Stack(
           children: [
             WebViewWidget(controller: _controller),

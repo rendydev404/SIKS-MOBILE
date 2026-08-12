@@ -84,18 +84,18 @@ body.light-mode {
 body.light-mode { background: #f0f4f8 !important; color: #1e293b; }
 body.light-mode .content-wrapper { background: #f0f4f8; }
 
-/* ── Layout: Sidebar stays dark, header goes white ── */
-body.light-mode .sidebar { background: #1e293b; }
+/* ── Light layout ── */
+body.light-mode .sidebar { background: #ffffff; border-right-color: #e2e8f0; }
 body.light-mode .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 body.light-mode .page-title { color: #1e293b; }
 body.light-mode .user-name { color: #1e293b; }
 body.light-mode .btn-logout { color: #64748b; }
 body.light-mode .btn-logout:hover { color: #ef4444; }
-body.light-mode .sidebar-footer { background: rgba(0,0,0,0.15); color: #cbd5e1; }
-body.light-mode .sidebar-header .logo { color: #f8fafc; }
-body.light-mode .nav-link { color: #cbd5e1; }
-body.light-mode .nav-link:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
-body.light-mode .nav-link.active { color: white; }
+body.light-mode .sidebar-footer { background: #f8fafc; color: #64748b; border-top-color: #e2e8f0; }
+body.light-mode .sidebar-header .logo { color: #1e293b; }
+body.light-mode .nav-link { color: #475569; }
+body.light-mode .nav-link:hover { color: #3730a3; background: #eef2ff; }
+body.light-mode .nav-link.active { color: #4338ca; background: #eef2ff; }
 
 /* ── Cards ── */
 body.light-mode .card { background: #fff; border-color: #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }

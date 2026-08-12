@@ -64,7 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0f172a),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -77,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPressed: _finish,
                   child: const Text(
                     'Lewati',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
                   ),
                 ),
               ),
@@ -191,7 +191,7 @@ class _OnboardingPage extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFF0F172A),
               fontSize: 28,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.3,
@@ -204,7 +204,7 @@ class _OnboardingPage extends StatelessWidget {
           Text(
             subtitle,
             style: const TextStyle(
-              color: Colors.white54,
+              color: Color(0xFF64748B),
               fontSize: 15,
               height: 1.6,
             ),

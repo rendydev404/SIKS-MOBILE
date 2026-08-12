@@ -6,7 +6,7 @@ class LoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF0f172a),
+      color: const Color(0xFFF8FAFC),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -16,7 +16,8 @@ class LoadingOverlay extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF1e293b),
+                color: const Color(0xFFFFFFFF),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -45,7 +46,7 @@ class LoadingOverlay extends StatelessWidget {
             const Text(
               'SIKS Al Amin',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF0F172A),
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -55,7 +56,7 @@ class LoadingOverlay extends StatelessWidget {
             const Text(
               'Sistem Informasi Keuangan Sekolah',
               style: TextStyle(
-                color: Colors.white54,
+                color: Color(0xFF64748B),
                 fontSize: 12,
               ),
             ),

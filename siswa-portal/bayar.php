@@ -282,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .success-message { color: var(--text-secondary); margin-bottom: 25px; line-height: 1.6; }
     </style>
 </head>
-<body>
+<body class="light-mode">
     
     <?php if ($success): ?>
     <div class="success-overlay" id="successModal">

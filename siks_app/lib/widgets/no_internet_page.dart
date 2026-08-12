@@ -42,7 +42,7 @@ class _NoInternetPageState extends State<NoInternetPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0f172a),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -60,10 +60,10 @@ class _NoInternetPageState extends State<NoInternetPage>
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1e293b),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: const Color(0xFF334155),
+                      color: const Color(0xFFE2E8F0),
                       width: 1.5,
                     ),
                   ),
@@ -80,7 +80,7 @@ class _NoInternetPageState extends State<NoInternetPage>
               const Text(
                 'Tidak Ada Koneksi',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF0F172A),
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                 ),
@@ -92,7 +92,7 @@ class _NoInternetPageState extends State<NoInternetPage>
                 'Periksa koneksi internet kamu\nlalu coba lagi.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: Color(0xFF64748B),
                   fontSize: 15,
                   height: 1.5,
                 ),

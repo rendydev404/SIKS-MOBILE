@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0f4f8">
+    <meta name="theme-color" content="#f0f4f8">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' - ' : '' ?>SIKS SMK Al Amin</title>
     <script>
         if (navigator.userAgent.indexOf('SIKSApp/') !== -1) {
@@ -23,10 +22,10 @@
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>">
 </head>
-<body>
+<body class="light-mode">
     <script>
-        // Apply saved theme instantly
-        if(localStorage.getItem('siks-theme') === 'light') document.body.classList.add('light-mode');
+        // Light is the default; retain dark mode only when the user explicitly chose it.
+        if (localStorage.getItem('siks-theme') === 'dark') document.body.classList.remove('light-mode');
         
         // Global toggle function to guarantee it works regardless of DOM load order
         function toggleSiksTheme() {
@@ -47,7 +46,7 @@
                 </div>
                 <div class="header-right" style="display:flex;align-items:center;gap:12px; position:relative; z-index:999999;">
                     <!-- Premium Theme Toggle Switch -->
-                    <button class="theme-switch-wrap" onclick="toggleSiksTheme()" style="background:transparent; border:none; padding:0; cursor:pointer; z-index:999999; display:flex; align-items:center; gap:8px; outline:none;">
+                    <button type="button" class="theme-switch-wrap" style="background:transparent; border:none; padding:0; cursor:pointer; z-index:999999; display:flex; align-items:center; gap:8px; outline:none;">
                         <span class="theme-switch-label">Mode</span>
                         <div class="theme-switch" title="Mode Terang / Gelap" style="pointer-events:none;">
                             <span class="ts-stars"></span>

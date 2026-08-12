@@ -66,12 +66,12 @@ flutter:
 
 # Splash screen config
 flutter_native_splash:
-  color: "#0f172a"
+  color: "#f8fafc"
   image: assets/images/logo.png
   android: true
   ios: false
   android_12:
-    color: "#0f172a"
+    color: "#f8fafc"
     image: assets/images/logo.png
 
 flutter_launcher_icons:

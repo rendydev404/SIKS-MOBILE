@@ -18,7 +18,7 @@ class SiksApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6366f1),
-          brightness: Brightness.dark,
+          brightness: Brightness.light,
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
@@ -27,9 +27,9 @@ class SiksApp extends StatelessWidget {
       builder: (context, child) {
         SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF0f172a),
-          systemNavigationBarIconBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFFF8FAFC),
+          systemNavigationBarIconBrightness: Brightness.dark,
         ));
         return child!;
       },

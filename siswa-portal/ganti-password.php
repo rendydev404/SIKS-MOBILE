@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-control-simple:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
     </style>
 </head>
-<body>
+<body class="light-mode">
     <div class="container animate-slide-up">
         <div class="card glass">
             <div class="card-header">
