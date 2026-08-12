@@ -35,6 +35,83 @@ $kelasList = $pdo->query("SELECT * FROM kelas ORDER BY tingkat, jurusan")->fetch
 include '../includes/header.php';
 ?>
 
+<style>
+    .invoice-search {
+        flex: 0 1 360px;
+        min-width: 280px;
+    }
+
+    .invoice-search input {
+        min-height: 52px;
+        padding: 14px 46px 14px 48px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 14px;
+        font-size: 15px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .invoice-search input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+    }
+
+    .invoice-search .search-clear {
+        display: none;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        transform: translateY(-50%);
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+    }
+
+    .invoice-search .search-clear:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .invoice-search .search-clear.is-visible {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .invoice-search .search-clear i {
+        position: static;
+        transform: none;
+        color: inherit;
+    }
+
+    .invoice-search-hint {
+        display: block;
+        margin: 7px 0 0 2px;
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    .invoice-search-empty {
+        display: none;
+        margin: 0 0 16px;
+        padding: 14px 16px;
+        border: 1px dashed var(--border-color);
+        border-radius: 12px;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .invoice-search-empty.is-visible { display: block; }
+
+    @media (max-width: 600px) {
+        .invoice-search { flex-basis: 100%; min-width: 0; }
+    }
+</style>
+
 <div class="toolbar">
     <div class="alert alert-info" style="margin-bottom: 25px; border-left: 5px solid #3b82f6;">
         <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Cara Menagih dengan Gambar (Sangat Mudah):</h5>
@@ -49,9 +126,13 @@ include '../includes/header.php';
         </ol>
     </div>
 
-    <div class="card mb-4">
+    <div class="search-box invoice-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Cari nama atau NIS...">
+        <input type="search" id="searchInput" placeholder="Cari nama atau NIS siswa" aria-label="Cari siswa berdasarkan nama atau NIS" autocomplete="off">
+        <button type="button" id="clearSearch" class="search-clear" aria-label="Hapus pencarian" title="Hapus pencarian">
+            <i class="fas fa-times"></i>
+        </button>
+        <span id="searchStatus" class="invoice-search-hint" aria-live="polite">Cari berdasarkan nama atau NIS siswa.</span>
     </div>
     <div class="filter-group">
         <form method="GET" style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -81,6 +162,10 @@ include '../includes/header.php';
             </select>
         </form>
     </div>
+</div>
+
+<div id="searchEmpty" class="invoice-search-empty" role="status">
+    <i class="fas fa-search" aria-hidden="true"></i> Tidak ada siswa yang cocok dengan pencarian.
 </div>
 
                     <?php 
@@ -131,7 +216,7 @@ include '../includes/header.php';
                         $noWa = preg_replace('/[^0-9]/', '', $noWa);
                         if (substr($noWa, 0, 1) == '0') $noWa = '62' . substr($noWa, 1);
                     ?>
-                    <tr>
+                    <tr class="invoice-row" data-search="<?= e(strtolower($siswa['nis'] . ' ' . $siswa['nama'])) ?>">
                         <td style="text-align: center;"><?= $no++ ?></td>
                         <td><?= e($siswa['nis']) ?></td>
                         <td><?= e($siswa['nama']) ?></td>
@@ -190,14 +275,34 @@ include '../includes/header.php';
 </div>
 
 <script>
-// Simple search functionality
-document.getElementById('searchInput').addEventListener('keyup', function() {
-    const filter = this.value.toLowerCase();
-    const rows = document.querySelectorAll('table tbody tr');
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(filter) ? '' : 'none';
+const searchInput = document.getElementById('searchInput');
+const clearSearch = document.getElementById('clearSearch');
+const searchStatus = document.getElementById('searchStatus');
+const searchEmpty = document.getElementById('searchEmpty');
+const invoiceRows = Array.from(document.querySelectorAll('.invoice-row'));
+
+function filterInvoices() {
+    const query = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    invoiceRows.forEach((row) => {
+        const matches = !query || row.dataset.search.includes(query);
+        row.hidden = !matches;
+        if (matches) visibleCount += 1;
     });
+
+    clearSearch.classList.toggle('is-visible', query.length > 0);
+    searchEmpty.classList.toggle('is-visible', query.length > 0 && visibleCount === 0);
+    searchStatus.textContent = query
+        ? `${visibleCount} siswa ditemukan untuk “${searchInput.value.trim()}”.`
+        : 'Cari berdasarkan nama atau NIS siswa.';
+}
+
+searchInput.addEventListener('input', filterInvoices);
+clearSearch.addEventListener('click', () => {
+    searchInput.value = '';
+    filterInvoices();
+    searchInput.focus();
 });
 </script>
 

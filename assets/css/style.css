@@ -560,6 +560,12 @@ html.native-app-mode .login-container::after {
     font-size: 15px;
 }
 
+body.light-mode .app-download .btn {
+    background: #3ddc84;
+    border-color: #3ddc84;
+    color: #123322;
+}
+
 .app-download .btn:hover {
     background: #57e596;
     border-color: #57e596;
