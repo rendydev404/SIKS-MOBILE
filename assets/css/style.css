@@ -512,6 +512,41 @@ a {
     font-size: 14px;
 }
 
+.app-download {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.app-download .btn {
+    min-height: 48px;
+}
+
+.app-download .btn:hover {
+    transform: translateY(-2px);
+}
+
+.app-download .btn:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.45);
+    outline-offset: 3px;
+}
+
+.app-download__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 12px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.app-download__hint i {
+    margin-top: 3px;
+    color: var(--primary);
+}
+
 /* FORM */
 .form-group {
     margin-bottom: 20px;

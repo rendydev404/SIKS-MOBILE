@@ -171,6 +171,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Masuk
                 </button>
             </form>
+
+            <div class="app-download">
+                <a href="downloads/siks-al-amin.apk" class="btn btn-secondary btn-block" download>
+                    <i class="fab fa-android" aria-hidden="true"></i>
+                    Download Aplikasi Android
+                </a>
+                <p class="app-download__hint">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    Khusus Android. Izinkan instalasi dari sumber ini jika diminta.
+                </p>
+            </div>
         </div>
     </div>
 </body>
