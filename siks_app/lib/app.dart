@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/fcm_service.dart';
@@ -53,37 +54,46 @@ class _HomeWrapper extends StatefulWidget {
 class _HomeWrapperState extends State<_HomeWrapper> {
   final GlobalKey<WebViewScreenState> _webViewKey = GlobalKey();
   String? _pendingUrl;
+  bool _deferredServicesStarted = false;
 
   @override
   void initState() {
     super.initState();
-    _initServices();
+    unawaited(_initDeepLinks());
   }
 
-  Future<void> _initServices() async {
-    // FCM
-    await FcmService.instance.init(
-      onTap: (url) {
-        final state = _webViewKey.currentState;
-        if (state != null) {
-          state.navigateTo(url);
-        } else {
-          _pendingUrl = url;
-        }
-      },
-    );
-
-    // Deep links
+  Future<void> _initDeepLinks() async {
     await DeepLinkService.instance.init(
-      onLink: (url) {
-        final state = _webViewKey.currentState;
-        if (state != null) {
-          state.navigateTo(url);
-        } else {
-          _pendingUrl = url;
-        }
-      },
+      onLink: _navigateFromExternal,
     );
+  }
+
+  void _navigateFromExternal(String url) {
+    final state = _webViewKey.currentState;
+    if (state != null) {
+      state.navigateTo(url);
+    } else {
+      _pendingUrl = url;
+    }
+  }
+
+  void _startDeferredServices() {
+    if (_deferredServicesStarted) return;
+    _deferredServicesStarted = true;
+    unawaited(_initFcmAfterFirstPaint());
+  }
+
+  Future<void> _initFcmAfterFirstPaint() async {
+    // Avoid competing with the first WebView render on lower-end devices.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    try {
+      await FcmService.instance.init(
+        onTap: _navigateFromExternal,
+      );
+      await _webViewKey.currentState?.sendFcmToken();
+    } catch (error) {
+      debugPrint('[FCM] Deferred initialization failed: $error');
+    }
   }
 
   @override
@@ -91,6 +101,7 @@ class _HomeWrapperState extends State<_HomeWrapper> {
     return WebViewScreen(
       key: _webViewKey,
       initialUrl: _pendingUrl,
+      onFirstPageFinished: _startDeferredServices,
     );
   }
 }

@@ -6,6 +6,11 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0f4f8">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' - ' : '' ?>SIKS SMK Al Amin</title>
+    <script>
+        if (navigator.userAgent.indexOf('SIKSApp/') !== -1) {
+            document.documentElement.classList.add('native-app-mode');
+        }
+    </script>
     
     <!-- Preconnect & Preload for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,10 +18,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="preload" href="<?= BASE_URL ?>assets/css/style.css?v=2.0.0" as="style">
-    <link rel="preload" href="<?= BASE_URL ?>assets/css/responsive.css?v=2.0.0" as="style">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css?v=2.0.0">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/responsive.css?v=2.0.0">
+    <link rel="preload" href="<?= BASE_URL ?>assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>" as="style">
+    <link rel="preload" href="<?= BASE_URL ?>assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>" as="style">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>">
 </head>
 <body>
     <script>

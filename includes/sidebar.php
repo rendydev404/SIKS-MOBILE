@@ -134,6 +134,12 @@
                     <span>Data User</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="<?= BASE_URL ?>users/ganti-password.php" class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'ganti-password') !== false ? 'active' : '' ?>">
+                    <i class="fas fa-key"></i>
+                    <span>Ganti Password</span>
+                </a>
+            </li>
             <?php endif; ?>
         </ul>
     </nav>

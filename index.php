@@ -7,17 +7,6 @@
 require_once 'config/database.php';
 require_once 'includes/functions.php';
 
-// AUTO FIX: Reset password jika belum ada session 'password_fixed'
-if (!isset($_SESSION['password_fixed'])) {
-    try {
-        $hash = password_hash('admin123', PASSWORD_DEFAULT);
-        $pdo->prepare("UPDATE users SET password = ?")->execute([$hash]);
-        $_SESSION['password_fixed'] = true;
-    } catch (Exception $e) {
-        // ignore
-    }
-}
-
 // Jika sudah login, redirect ke dashboard
 if (isLoggedIn()) {
     header('Location: pages/dashboard.php');
@@ -109,6 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SIKS SMK Al Amin</title>
+    <script>
+        if (navigator.userAgent.indexOf('SIKSApp/') !== -1) {
+            document.documentElement.classList.add('native-app-mode');
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__ . '/assets/css/style.css') ?>">

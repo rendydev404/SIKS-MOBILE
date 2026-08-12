@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -15,7 +16,13 @@ import '../../widgets/loading_overlay.dart';
 import '../../widgets/no_internet_page.dart';
 class WebViewScreen extends StatefulWidget {
   final String? initialUrl;
-  const WebViewScreen({super.key, this.initialUrl});
+  final VoidCallback? onFirstPageFinished;
+
+  const WebViewScreen({
+    super.key,
+    this.initialUrl,
+    this.onFirstPageFinished,
+  });
 
   @override
   State<WebViewScreen> createState() => WebViewScreenState();
@@ -29,12 +36,16 @@ class WebViewScreenState extends State<WebViewScreen> {
   final ValueNotifier<bool> _isLoading = ValueNotifier(true);
   final ValueNotifier<bool> _hasError = ValueNotifier(false);
   final ValueNotifier<bool> _isOffline = ValueNotifier(false);
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _hasCompletedInitialLoad = false;
+  bool _reportedFirstPageFinished = false;
 
   @override
   void dispose() {
     _isLoading.dispose();
     _hasError.dispose();
     _isOffline.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
@@ -53,7 +64,7 @@ class WebViewScreenState extends State<WebViewScreen> {
     if (mounted) {
       _isOffline.value = result.contains(ConnectivityResult.none);
     }
-    Connectivity().onConnectivityChanged.listen((results) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       if (!mounted) return;
       final offline = results.contains(ConnectivityResult.none);
       if (_isOffline.value != offline) {
@@ -80,13 +91,20 @@ class WebViewScreenState extends State<WebViewScreen> {
         NavigationDelegate(
           onPageStarted: (_) {
             if (mounted) _hasError.value = false;
+            if (!_hasCompletedInitialLoad && mounted) _isLoading.value = true;
           },
           onPageFinished: (_) {
+            _hasCompletedInitialLoad = true;
             if (mounted) _isLoading.value = false;
             _injectBridge();
             _injectImageCaptureScript();
+            if (!_reportedFirstPageFinished) {
+              _reportedFirstPageFinished = true;
+              widget.onFirstPageFinished?.call();
+            }
           },
-          onWebResourceError: (_) {
+          onWebResourceError: (error) {
+            if (!error.isForMainFrame) return;
             if (mounted) {
               _isLoading.value = false;
               _hasError.value = true;
@@ -140,8 +158,27 @@ class WebViewScreenState extends State<WebViewScreen> {
       (function() {
         if (window._siksInitialized) return;
         window._siksInitialized = true;
+        document.documentElement.classList.add('native-app-mode');
         document.body.classList.add('native-app-mode');
         window.isNativeApp = true;
+
+        // Some portal pages use their own stylesheet. Apply the same lightweight
+        // rendering rules directly so scrolling stays smooth in the WebView.
+        if (!document.getElementById('siks-native-performance')) {
+          var style = document.createElement('style');
+          style.id = 'siks-native-performance';
+          style.textContent =
+            'html.native-app-mode{-webkit-tap-highlight-color:transparent}' +
+            'html.native-app-mode *,html.native-app-mode *::before,html.native-app-mode *::after{' +
+            'animation-duration:.01ms!important;animation-iteration-count:1!important;' +
+            'transition-duration:.01ms!important;scroll-behavior:auto!important;' +
+            '-webkit-backdrop-filter:none!important;backdrop-filter:none!important}';
+          style.textContent +=
+            'html.native-app-mode .card,html.native-app-mode .glass,' +
+            'html.native-app-mode [class*="shadow"],html.native-app-mode .siswa-portal-header{' +
+            'box-shadow:none!important}';
+          document.head.appendChild(style);
+        }
 
         // Use event delegation for file inputs
         document.addEventListener('click', function(e) {
@@ -211,7 +248,7 @@ class WebViewScreenState extends State<WebViewScreen> {
         function captureAndSend(card, btn, originalText) {
             html2canvas(card, {
                 useCORS: true, 
-                scale: 2, 
+                scale: Math.min(window.devicePixelRatio || 1, 1.5),
                 backgroundColor: '#ffffff',
                 logging: false
             }).then(function(canvas) {
@@ -441,6 +478,9 @@ class WebViewScreenState extends State<WebViewScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   void navigateTo(String url) =>
       _controller.loadRequest(Uri.parse(url));
+
+  /// Sends a freshly available FCM token after deferred startup work finishes.
+  Future<void> sendFcmToken() => _sendFcmTokenToWeb();
 
   // ─────────────────────────────────────────────────────────────────────────
   // Back button

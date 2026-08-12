@@ -415,6 +415,39 @@ a {
     color: inherit;
 }
 
+/* Native WebView performance mode: keep interactions instant on lower-end phones. */
+html.native-app-mode {
+    -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app-mode *,
+html.native-app-mode *::before,
+html.native-app-mode *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+html.native-app-mode .bottom-nav,
+html.native-app-mode .sidebar.active {
+    box-shadow: none !important;
+}
+
+html.native-app-mode .card,
+html.native-app-mode .glass,
+html.native-app-mode [class*="shadow"],
+html.native-app-mode .siswa-portal-header {
+    box-shadow: none !important;
+}
+
+html.native-app-mode .login-container::before,
+html.native-app-mode .login-container::after {
+    display: none;
+}
+
 /* LOGIN */
 .login-container {
     min-height: 100vh;

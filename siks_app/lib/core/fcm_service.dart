@@ -7,10 +7,18 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
 
+Future<void>? _firebaseInitialization;
+
+/// Starts Firebase once and shares the same work between startup and FCM.
+/// This lets the first Flutter frame render while Firebase initializes.
+Future<void> initializeFirebase() {
+  return _firebaseInitialization ??= Firebase.initializeApp();
+}
+
 /// Handler untuk pesan FCM ketika app dalam state terminated/background
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await initializeFirebase();
   debugPrint('[FCM] Background message: ${message.messageId}');
 }
 
@@ -27,6 +35,7 @@ class FcmService {
 
   // ─── Init ────────────────────────────────────────────────────────────────
   Future<void> init({required Function(String url) onTap}) async {
+    await initializeFirebase();
     onNotificationTap = onTap;
 
     // 1. Request permission (Android 13+)

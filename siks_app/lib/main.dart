@@ -1,4 +1,4 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +14,9 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Init Firebase
-  await Firebase.initializeApp();
+  // Start Firebase in parallel with Flutter's first frame. FCM waits for this
+  // shared initialization before it accesses Firebase APIs.
+  unawaited(initializeFirebase());
 
   // Register background message handler (must be top-level)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

@@ -52,14 +52,7 @@ function autoUpdateDatabase($pdo) {
             $pdo->exec("UPDATE tahun_ajaran SET is_active = FALSE WHERE tahun != '2025/2026'");
         }
         
-        // 6. Update password admin jika masih salah
-        $admin = $pdo->query("SELECT password FROM users WHERE username = 'admin'")->fetch();
-        if ($admin && !password_verify('admin123', $admin['password'])) {
-            $hash = password_hash('admin123', PASSWORD_DEFAULT);
-            $pdo->prepare("UPDATE users SET password = ? WHERE username IN ('admin', 'bendahara')")->execute([$hash]);
-        }
-        
-        // 7. Cek dan tambah kolom tahun_masuk di siswa
+        // 6. Cek dan tambah kolom tahun_masuk di siswa
         $columns = $pdo->query("SHOW COLUMNS FROM siswa LIKE 'tahun_masuk'")->fetch();
         if (!$columns) {
             $pdo->exec("ALTER TABLE siswa ADD COLUMN tahun_masuk INT DEFAULT NULL AFTER kelas_id");
@@ -75,7 +68,7 @@ function autoUpdateDatabase($pdo) {
                         WHERE s.tahun_masuk IS NULL");
         }
 
-        // 8. Cek dan buat tabel setting_pembayaran
+        // 7. Cek dan buat tabel setting_pembayaran
         $tables = $pdo->query("SHOW TABLES LIKE 'setting_pembayaran'")->fetch();
         if (!$tables) {
             $pdo->exec("CREATE TABLE IF NOT EXISTS setting_pembayaran (
