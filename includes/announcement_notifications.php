@@ -36,6 +36,25 @@ function ensureAnnouncementNotificationSchema(PDO $pdo) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $column = $pdo->query("SHOW COLUMNS FROM pengumuman LIKE 'notification_queued_at'")->fetch();
     if (!$column) $pdo->exec("ALTER TABLE pengumuman ADD COLUMN notification_queued_at DATETIME NULL DEFAULT NULL");
+    $revision = $pdo->query("SHOW COLUMNS FROM pengumuman LIKE 'notification_revision'")->fetch();
+    if (!$revision) $pdo->exec("ALTER TABLE pengumuman ADD COLUMN notification_revision INT UNSIGNED NOT NULL DEFAULT 0");
+}
+
+/**
+ * Clears the guards that keep an announcement from being sent twice, so an
+ * edited one reaches students again.
+ *
+ * Three things block a resend: the delivery rows are unique per
+ * (announcement, device), notification_queued_at marks the announcement as
+ * already handled, and the app ignores a notification id it has shown before.
+ * Bumping the revision gives the message a new id; clearing the other two
+ * lets the queue refill.
+ */
+function resetAnnouncementNotification(PDO $pdo, $announcementId) {
+    $pdo->prepare('DELETE FROM announcement_notification_deliveries WHERE pengumuman_id = ?')
+        ->execute([$announcementId]);
+    $pdo->prepare('UPDATE pengumuman SET notification_revision = notification_revision + 1, notification_queued_at = NULL WHERE id = ?')
+        ->execute([$announcementId]);
 }
 
 function queueAnnouncementNotification(PDO $pdo, $announcementId) {

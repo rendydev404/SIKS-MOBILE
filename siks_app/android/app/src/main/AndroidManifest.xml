@@ -84,14 +84,20 @@
             </intent-filter>
         </activity>
 
-        <!-- FCM Service -->
-        <service
-            android:name="com.google.firebase.messaging.FirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
+        <!-- The firebase_messaging plugin merges in its own service for
+             com.google.firebase.MESSAGING_EVENT. Declaring the base
+             FirebaseMessagingService here took that filter over, and the base
+             class handles nothing - so foreground messages and the Dart
+             callbacks never fired. Leave the plugin's service alone. -->
+
+        <!-- Used when an incoming message names a channel the device does not
+             have yet, which would otherwise be dropped silently on Android 8+. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="siks_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
 
         <!-- Don't delete this meta-data: it is used by the Flutter tool -->
         <meta-data

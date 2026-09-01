@@ -17,15 +17,19 @@ $pdo->exec("UPDATE announcement_notification_deliveries SET status = 'retry', lo
 $lockToken = bin2hex(random_bytes(16));
 $claim = $pdo->prepare("UPDATE announcement_notification_deliveries SET status = 'processing', lock_token = ?, locked_at = NOW(), attempts = attempts + 1 WHERE status IN ('pending','retry') AND next_attempt_at <= NOW() ORDER BY id LIMIT 50");
 $claim->execute([$lockToken]);
-$jobs = $pdo->prepare("SELECT d.*, p.judul, p.isi, fd.fcm_token FROM announcement_notification_deliveries d INNER JOIN pengumuman p ON p.id = d.pengumuman_id INNER JOIN fcm_devices fd ON fd.id = d.device_id WHERE d.lock_token = ?");
+$jobs = $pdo->prepare("SELECT d.*, p.judul, p.isi, p.notification_revision, fd.fcm_token FROM announcement_notification_deliveries d INNER JOIN pengumuman p ON p.id = d.pengumuman_id INNER JOIN fcm_devices fd ON fd.id = d.device_id WHERE d.lock_token = ?");
 $jobs->execute([$lockToken]);
 $jobRows = $jobs->fetchAll();
 $sent = $retry = $failed = 0;
 foreach ($jobRows as $job) {
-    $notificationId = 'announcement_' . $job['pengumuman_id'];
+    // The id changes per revision so an edited announcement is not mistaken
+    // for one the phone already showed; the tag stays per announcement so the
+    // new wording replaces the old entry instead of stacking beside it.
+    $notificationId = 'announcement_' . $job['pengumuman_id'] . '_r' . (int) $job['notification_revision'];
     $result = sendFCMNotification($job['fcm_token'], $job['judul'], $job['isi'], [
         'type' => 'announcement', 'announcement_id' => $job['pengumuman_id'],
         'notification_id' => $notificationId,
+        'notification_tag' => 'announcement_' . $job['pengumuman_id'],
         'url' => BASE_URL . 'siswa-portal/dashboard.php#pengumuman',
     ]);
     if ($result['success']) {

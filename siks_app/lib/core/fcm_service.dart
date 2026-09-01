@@ -13,10 +13,39 @@ Future<void> initializeFirebase() {
   return _firebaseInitialization ??= Firebase.initializeApp();
 }
 
+const AndroidNotificationChannel _paymentChannel = AndroidNotificationChannel(
+  'siks_channel',
+  'SIKS Notifikasi',
+  description: 'Notifikasi pembayaran SPP',
+  importance: Importance.high,
+);
+const AndroidNotificationChannel _announcementChannel = AndroidNotificationChannel(
+  'announcement_channel',
+  'Pengumuman Sekolah',
+  description: 'Pengumuman penting dari sekolah',
+  importance: Importance.high,
+);
+
+/// Creates both notification channels. Android 8+ silently drops a message
+/// naming a channel that does not exist, so this has to run before any message
+/// can arrive - not once the WebView happens to have finished painting.
+/// Creating a channel that already exists is a no-op.
+Future<void> ensureNotificationChannels() async {
+  final android = FlutterLocalNotificationsPlugin()
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+  if (android == null) return;
+  await android.createNotificationChannel(_paymentChannel);
+  await android.createNotificationChannel(_announcementChannel);
+}
+
 /// Handler untuk pesan FCM ketika app dalam state terminated/background
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await initializeFirebase();
+  // Runs in its own isolate, which has never seen the channels created on the
+  // main one.
+  await ensureNotificationChannels();
   debugPrint('[FCM] Background message: ${message.messageId}');
 }
 
@@ -86,23 +115,7 @@ class FcmService {
       },
     );
 
-    const paymentChannel = AndroidNotificationChannel(
-      'siks_channel',
-      'SIKS Notifikasi',
-      description: 'Notifikasi pembayaran SPP',
-      importance: Importance.high,
-    );
-    const announcementChannel = AndroidNotificationChannel(
-      'announcement_channel',
-      'Pengumuman Sekolah',
-      description: 'Pengumuman penting dari sekolah',
-      importance: Importance.high,
-    );
-    final android = _localNotif
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await android?.createNotificationChannel(paymentChannel);
-    await android?.createNotificationChannel(announcementChannel);
+    await ensureNotificationChannels();
   }
 
   // ─── Foreground Message Handler ──────────────────────────────────────────

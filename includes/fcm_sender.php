@@ -70,7 +70,8 @@ function sendFCMNotification($toToken, $title, $body, $data = []) {
         'channel_id' => $channelId,
         'sound' => 'default',
     ];
-    if (!empty($data['notification_id'])) $androidNotification['tag'] = (string) $data['notification_id'];
+    $tag = $data['notification_tag'] ?? $data['notification_id'] ?? '';
+    if (!empty($tag)) $androidNotification['tag'] = (string) $tag;
     $message = [
         'token' => $toToken,
         'notification' => ['title' => $title, 'body' => $body],

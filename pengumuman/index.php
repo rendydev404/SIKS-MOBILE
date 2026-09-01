@@ -26,14 +26,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
             $announcementId = null;
             if ($action === 'edit' && $id) {
-                $previous = $pdo->prepare('SELECT is_active FROM pengumuman WHERE id = ? FOR UPDATE');
+                $previous = $pdo->prepare('SELECT judul, isi, is_active FROM pengumuman WHERE id = ? FOR UPDATE');
                 $previous->execute([$id]);
                 $oldAnnouncement = $previous->fetch();
                 if (!$oldAnnouncement) throw new PDOException('Pengumuman tidak ditemukan');
                 $stmt = $pdo->prepare("UPDATE pengumuman SET judul = ?, isi = ?, is_active = ? WHERE id = ?");
                 $stmt->execute([$judul, $isi, $isActive, $id]);
                 $announcementId = (int) $id;
-                $isNewlyPublished = !$oldAnnouncement['is_active'] && $isActive;
+
+                // Students were told the old wording, so a changed title or
+                // body has to reach them as well - not just a first publish.
+                // Toggling is_active alone is not worth a second notification.
+                $wasJustPublished = !$oldAnnouncement['is_active'] && $isActive;
+                $textChanged = $oldAnnouncement['judul'] !== $judul || $oldAnnouncement['isi'] !== $isi;
+                $isNewlyPublished = $isActive && ($wasJustPublished || $textChanged);
+                if ($isNewlyPublished) {
+                    // Always start from a clean queue: an announcement that was
+                    // sent, deactivated and switched back on still carries the
+                    // old queued-at mark, which would swallow the new send.
+                    resetAnnouncementNotification($pdo, $announcementId);
+                }
                 $message = 'Pengumuman berhasil diperbarui!';
             } else {
                 $stmt = $pdo->prepare("INSERT INTO pengumuman (judul, isi, is_active, created_by) VALUES (?, ?, ?, ?)");
@@ -45,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($isNewlyPublished) {
                 $queued = queueAnnouncementNotification($pdo, $announcementId);
                 $message .= ' Notifikasi untuk ' . $queued . ' perangkat siswa telah masuk antrean.';
+            } elseif ($action === 'edit' && !$isActive) {
+                $message .= ' Pengumuman nonaktif, tidak ada notifikasi dikirim.';
             }
             $pdo->commit();
             setAlert('success', $message);

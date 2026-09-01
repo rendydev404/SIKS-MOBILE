@@ -21,5 +21,9 @@ Future<void> main() async {
   // Register background message handler (must be top-level)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
+  // Channels have to exist before the first message arrives, otherwise Android
+  // drops it without a trace. Cheap, and independent of Firebase being ready.
+  unawaited(ensureNotificationChannels());
+
   runApp(const SiksApp());
 }

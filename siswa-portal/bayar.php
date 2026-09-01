@@ -194,7 +194,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $title = "Pembayaran Baru";
                                     $body = "Pembayaran " . e($type) . " baru dari $namaSiswa (Rp " . number_format($jumlahBayarTotal, 0, ',', '.') . ") menunggu verifikasi.";
                                     foreach ($adminTokens as $token) {
-                                        sendFCMNotification($token, $title, $body);
+                                        $result = sendFCMNotification($token, $title, $body, [
+                                            'type' => 'payment',
+                                            'url' => BASE_URL . 'pages/dashboard.php',
+                                        ]);
+                                        // Retire tokens FCM rejects, so the
+                                        // list does not fill with dead devices.
+                                        if (!empty($result['invalid_token'])) {
+                                            $pdo->prepare("UPDATE fcm_devices SET is_active = 0 WHERE fcm_token = ?")->execute([$token]);
+                                        }
                                     }
                                 }
                             } catch (Exception $e) {
