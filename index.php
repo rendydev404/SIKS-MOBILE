@@ -36,6 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($user) {
                 if (password_verify($password, $user['password'])) {
+                    // Sesi baru untuk tiap login agar tidak menempel pada
+                    // PHPSESSID lama yang sudah dihapus saat logout.
+                    session_regenerate_id(true);
+
                     // Set session Admin
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
@@ -59,7 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $hash = password_hash($password, PASSWORD_DEFAULT);
                         $stmtUpdate = $pdo->prepare("UPDATE siswa SET password = ? WHERE id = ?");
                         $stmtUpdate->execute([$hash, $siswa['id']]);
-                        
+
+                        session_regenerate_id(true);
                         $_SESSION['siswa_id'] = $siswa['id'];
                         $_SESSION['siswa_nis'] = $siswa['nis'];
                         $_SESSION['siswa_nama'] = $siswa['nama'];
@@ -71,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         // Verify existing password
                         if (password_verify($password, $siswa['password'])) {
+                            session_regenerate_id(true);
                             $_SESSION['siswa_id'] = $siswa['id'];
                             $_SESSION['siswa_nis'] = $siswa['nis'];
                             $_SESSION['siswa_nama'] = $siswa['nama'];

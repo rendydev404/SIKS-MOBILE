@@ -28,7 +28,12 @@ class WebViewScreen extends StatefulWidget {
   State<WebViewScreen> createState() => WebViewScreenState();
 }
 
-class WebViewScreenState extends State<WebViewScreen> {
+class WebViewScreenState extends State<WebViewScreen>
+    with WidgetsBindingObserver {
+  /// A page that never reports back is treated as failed, so the user gets a
+  /// retry button instead of an empty WebView canvas.
+  static const Duration _loadTimeout = Duration(seconds: 25);
+
   late final WebViewController _controller;
   final ImagePicker _imagePicker = ImagePicker();
   static const MethodChannel _waChannel = MethodChannel('id.smkalamin.siks/whatsapp');
@@ -37,25 +42,39 @@ class WebViewScreenState extends State<WebViewScreen> {
   final ValueNotifier<bool> _hasError = ValueNotifier(false);
   final ValueNotifier<bool> _isOffline = ValueNotifier(false);
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  Timer? _loadTimeoutTimer;
   bool _hasCompletedInitialLoad = false;
   bool _reportedFirstPageFinished = false;
+  int _blankPageRecoveries = 0;
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     FcmService.instance.onTokenAvailable = null;
+    _connectivitySubscription?.cancel();
+    _loadTimeoutTimer?.cancel();
     _isLoading.dispose();
     _hasError.dispose();
     _isOffline.dispose();
-    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     FcmService.instance.onTokenAvailable = (_) => unawaited(_sendFcmTokenToWeb());
     _checkConnectivity();
     _initWebView();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Android can discard the WebView renderer while the app is backgrounded,
+    // which leaves a permanently blank page behind on resume.
+    if (state == AppLifecycleState.resumed && !_isLoading.value) {
+      unawaited(_recoverIfBlank());
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -71,7 +90,7 @@ class WebViewScreenState extends State<WebViewScreen> {
       final offline = results.contains(ConnectivityResult.none);
       if (_isOffline.value != offline) {
         _isOffline.value = offline;
-        if (!offline && _hasError.value) _controller.reload();
+        if (!offline && _hasError.value) unawaited(_reloadCurrentPage());
       }
     });
   }
@@ -92,15 +111,22 @@ class WebViewScreenState extends State<WebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
-            if (mounted) _hasError.value = false;
-            if (!_hasCompletedInitialLoad && mounted) _isLoading.value = true;
+            if (!mounted) return;
+            _hasError.value = false;
+            // The WebView clears the old page as soon as a navigation starts,
+            // so every navigation - not just the first - needs the overlay.
+            // Without it a login POST that stalls looks like a blank screen.
+            _isLoading.value = true;
+            _startLoadTimeout();
           },
           onPageFinished: (_) {
             _hasCompletedInitialLoad = true;
+            _loadTimeoutTimer?.cancel();
             if (mounted) _isLoading.value = false;
             _injectBridge();
             unawaited(_sendFcmTokenToWeb());
             _injectImageCaptureScript();
+            unawaited(_recoverIfBlank());
             if (!_reportedFirstPageFinished) {
               _reportedFirstPageFinished = true;
               widget.onFirstPageFinished?.call();
@@ -108,6 +134,7 @@ class WebViewScreenState extends State<WebViewScreen> {
           },
           onWebResourceError: (error) {
             if (error.isForMainFrame == false) return;
+            _loadTimeoutTimer?.cancel();
             if (mounted) {
               _isLoading.value = false;
               _hasError.value = true;
@@ -127,6 +154,72 @@ class WebViewScreenState extends State<WebViewScreen> {
       ..addJavaScriptChannel('ExternalLinkChannel',
           onMessageReceived: (m) => _handleExternalLinkFromWeb(m.message))
       ..loadRequest(Uri.parse(startUrl));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Blank-page recovery
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Fails a navigation that never finishes, instead of leaving an empty
+  /// WebView on screen with no way back.
+  void _startLoadTimeout() {
+    _loadTimeoutTimer?.cancel();
+    _loadTimeoutTimer = Timer(_loadTimeout, () {
+      if (!mounted || !_isLoading.value) return;
+      debugPrint('[WebView] Load timed out, showing retry page');
+      _isLoading.value = false;
+      _hasError.value = true;
+    });
+  }
+
+  /// Reloads the current address as a GET. Used instead of [WebViewController.reload]
+  /// because reloading a page that came from the login POST re-submits the form.
+  Future<void> _reloadCurrentPage() async {
+    final current = await _controller.currentUrl();
+    final target = (current == null || current.isEmpty || current == 'about:blank')
+        ? AppConstants.baseUrl
+        : current;
+    if (!mounted) return;
+    _hasError.value = false;
+    _isLoading.value = true;
+    _startLoadTimeout();
+    await _controller.loadRequest(Uri.parse(target));
+  }
+
+  /// A finished page with an empty document means the render died or the
+  /// response was empty - both show up as a white screen the user cannot
+  /// escape. Reload once; if it is still blank, hand over to the retry page.
+  Future<void> _recoverIfBlank() async {
+    if (!mounted) return;
+    Object? result;
+    try {
+      result = await _controller
+          .runJavaScriptReturningResult(
+            'document.body ? document.body.innerHTML.trim().length : 0',
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (error) {
+      // A dead renderer never answers. Treat that as a blank page too.
+      debugPrint('[WebView] Blank check failed: $error');
+    }
+
+    final length = int.tryParse(result?.toString().replaceAll('"', '') ?? '');
+    if (length != null && length > 0) {
+      _blankPageRecoveries = 0;
+      return;
+    }
+    if (!mounted) return;
+
+    if (_blankPageRecoveries >= 1) {
+      debugPrint('[WebView] Still blank after reload, showing retry page');
+      _blankPageRecoveries = 0;
+      _isLoading.value = false;
+      _hasError.value = true;
+      return;
+    }
+    _blankPageRecoveries++;
+    debugPrint('[WebView] Blank page detected, reloading');
+    await _reloadCurrentPage();
   }
 
   DateTime _lastWaShareTime = DateTime.fromMillisecondsSinceEpoch(0);
@@ -622,9 +715,7 @@ class WebViewScreenState extends State<WebViewScreen> {
                 if (isOffline) {
                   return NoInternetPage(onRetry: () {
                     _isOffline.value = false;
-                    _hasError.value = false;
-                    _isLoading.value = true;
-                    _controller.reload();
+                    unawaited(_reloadCurrentPage());
                   });
                 }
                 return ValueListenableBuilder<bool>(
@@ -632,9 +723,7 @@ class WebViewScreenState extends State<WebViewScreen> {
                   builder: (context, hasError, child) {
                     if (hasError) {
                       return NoInternetPage(onRetry: () {
-                        _hasError.value = false;
-                        _isLoading.value = true;
-                        _controller.reload();
+                        unawaited(_reloadCurrentPage());
                       });
                     }
                     return ValueListenableBuilder<bool>(
