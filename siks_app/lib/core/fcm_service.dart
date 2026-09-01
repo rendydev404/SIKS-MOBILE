@@ -102,7 +102,7 @@ class FcmService {
 
   // ─── Local Notifications Setup ───────────────────────────────────────────
   Future<void> _initLocalNotifications() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(android: androidInit);
 
     await _localNotif.initialize(
@@ -146,7 +146,7 @@ class FcmService {
           channelDescription: channelDescription,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@mipmap/launcher_icon',
         ),
       ),
       payload: url,
