@@ -31,17 +31,21 @@ foreach ($settings as $s) {
     $nominalMapByAngkatan[$s['tahun_masuk']][$s['jenis']] = (int)$s['nominal'];
 }
 
-$fallbacks = [
-    'SPP' => 150000, 'Infak' => 25000, 'Komputer' => 50000,
-    'Pendaftaran' => 150000, 'MPLS' => 100000, 'Seragam Olahraga' => 150000,
-    'Baju Werpack (TKJ)' => 200000, 'Jas Almamater' => 150000, 'Atribut' => 50000,
-    'UTS 1' => 50000, 'UAS 1' => 50000, 'UTS 2' => 50000, 'UAS 2' => 50000,
-    'Ujian Akhir (Kelas 12)' => 100000, 'Kenaikan Kelas' => 50000, 'Rapot' => 50000,
-    'PSG / PKL' => 300000, 'DSP' => 500000, 'Daftar Ulang' => 200000,
-];
+// Daftar jenis pembayaran yang aktif. Harus mengikuti getPaymentCategories(),
+// bukan daftar nama lama, supaya transaksi yang dicatat admin memakai nama yang
+// sama dengan yang dibaca portal siswa (mis. "PKL (Praktik Kerja Lapangan)",
+// bukan "PSG / PKL").
+$jenisAktif = ['SPP', 'Infak', 'Komputer'];
+foreach (getPaymentCategories() as $items) {
+    foreach ($items as $namaJenis => $meta) {
+        if (!in_array($namaJenis, $jenisAktif, true)) $jenisAktif[] = $namaJenis;
+    }
+}
 
-foreach ($fallbacks as $k => $v) {
-    if(!isset($nominalMapByAngkatan[0][$k])) $nominalMapByAngkatan[0][$k] = $v;
+foreach ($jenisAktif as $k) {
+    if (!isset($nominalMapByAngkatan[0][$k])) {
+        $nominalMapByAngkatan[0][$k] = (int)getNominalPembayaran($pdo, $k);
+    }
 }
 
 $bulanList = getBulanIndonesia();
@@ -169,7 +173,7 @@ include '../includes/header.php';
             <div class="form-group">
                 <label>Jenis Pembayaran <span class="text-danger">*</span></label>
                 <select name="jenis_pembayaran" id="jenisPembayaran" class="form-control form-control-simple" required>
-                    <?php foreach ($nominalMapByAngkatan[0] as $jenis => $nom): ?>
+                    <?php foreach ($jenisAktif as $jenis): ?>
                         <option value="<?= e($jenis) ?>"><?= e($jenis) ?></option>
                     <?php endforeach; ?>
                 </select>

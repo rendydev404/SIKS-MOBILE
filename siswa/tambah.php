@@ -218,13 +218,14 @@ include '../includes/header.php';
                                 if (isYearlyPayment($name)) continue;
 
                                 $nomDefault = getNominalPembayaran($pdo, $name, 0); // Biaya sekali bayar, default global
-                                $boxId = '';
-                                if (str_contains($name, 'Werpack')) $boxId = 'box_werpack';
-                                if ($name === 'PSG / PKL') $boxId = 'box_pkl';
-                                if (str_contains($name, 'Ujian Akhir')) $boxId = 'box_ujian_akhir';
+                                // Syarat tampil item (harus cocok dengan aturan di hitungTunggakan)
+                                $req = '';
+                                if (isPembayaranKhususTKJ($name)) $req = 'tkj';
+                                elseif (str_contains($name, 'Kelas 11') || str_contains($name, 'PKL')) $req = 'XI';
+                                elseif (str_contains($name, 'Kelas 12') || str_contains($name, 'DAT')) $req = 'XII';
                         ?>
-                        <div style="background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s; <?= $boxId ? 'display: none;' : '' ?>" 
-                             class="migrate-box" <?= $boxId ? 'id="'.$boxId.'"' : '' ?>>
+                        <div style="background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s; <?= $req ? 'display: none;' : '' ?>" 
+                             class="migrate-box" data-req="<?= $req ?>">
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                                 <input type="checkbox" name="admin_migrate[]" value="<?= e($name) ?>" id="mig_<?= md5($name) ?>" 
                                        style="width: 20px; height: 20px; cursor: pointer;"
@@ -396,23 +397,19 @@ function updateMigrationVisibility() {
     const tingkat = selected.getAttribute('data-tingkat');
     const jurusan = selected.getAttribute('data-jurusan');
     
-    // Baju Werpack Khusus TKJ
-    const boxWerpack = document.getElementById('box_werpack');
-    if (boxWerpack) {
-        boxWerpack.style.display = (jurusan === 'TKJ') ? 'block' : 'none';
-    }
-    
-    // PSG / PKL Khusus Kelas 11 dan Kelas 12 (karena kls 12 pasti melewati kls 11)
-    const boxPkl = document.getElementById('box_pkl');
-    if (boxPkl) {
-        boxPkl.style.display = (tingkat === 'XI' || tingkat === 'XII') ? 'block' : 'none';
-    }
-
-    // Ujian Akhir Khusus Kelas 12
-    const boxUjian = document.getElementById('box_ujian_akhir');
-    if (boxUjian) {
-        boxUjian.style.display = (tingkat === 'XII') ? 'block' : 'none';
-    }
+    // Tampilkan item sesuai jurusan/tingkat kelas yang dipilih.
+    document.querySelectorAll('.migrate-box').forEach(function(box) {
+        var req = box.getAttribute('data-req') || '';
+        var show = true;
+        if (req === 'tkj') {
+            show = (jurusan || '').toUpperCase().indexOf('TKJ') !== -1;
+        } else if (req === 'XI') {
+            show = ['XI', 'XII', 'Alumni'].indexOf(tingkat) !== -1;
+        } else if (req === 'XII') {
+            show = ['XII', 'Alumni'].indexOf(tingkat) !== -1;
+        }
+        box.style.display = show ? 'block' : 'none';
+    });
 
 }
 
