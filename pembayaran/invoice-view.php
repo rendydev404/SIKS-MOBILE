@@ -458,6 +458,30 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
                 link.click();
             };
 
+            // 0. Aplikasi Android. WebView tidak mendukung navigator.share
+            // maupun ClipboardItem, sehingga kedua jalur di bawah gagal diam-diam
+            // dan gambarnya hilang. Serahkan ke sisi native: gambar disalin lewat
+            // clipboard Android, lalu chat siswa dibuka langsung.
+            if (window.isNativeApp && window.WhatsAppShareChannel) {
+                showToast("Menyiapkan gambar...");
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    WhatsAppShareChannel.postMessage(JSON.stringify({
+                        base64: reader.result,
+                        phone: <?= json_encode($noWa ?: '') ?>,
+                        text: <?= json_encode($pesan) ?>
+                    }));
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                };
+                reader.onerror = function() {
+                    showToast("Gagal menyiapkan gambar.");
+                    openWA();
+                };
+                reader.readAsDataURL(blob);
+                return;
+            }
+
             // 1. Try Native Web Share API (Best for Mobile Browsers)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 showToast("Membuka menu bagikan WhatsApp...");

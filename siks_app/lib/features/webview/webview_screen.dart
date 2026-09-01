@@ -431,11 +431,25 @@ class WebViewScreenState extends State<WebViewScreen>
       final file = File('${dir.path}/kwitansi.png');
       await file.writeAsBytes(bytes, flush: true);
 
-      await _waChannel.invokeMethod('shareToWhatsApp', {
+      final outcome = await _waChannel.invokeMethod<String>('shareToWhatsApp', {
         'imagePath': file.path,
         'text': text,
         'phone': phone,
       });
+
+      // Only worth saying something when there was no number to aim at; the
+      // receipt and its caption are attached either way.
+      if (mounted && outcome == 'picker') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 5),
+            content: Text(
+              'Nomor WhatsApp siswa belum diisi, jadi kontaknya harus dipilih '
+              'manual. Lengkapi nomornya di data siswa agar langsung terkirim.',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[WebView] WA Share Error: $e');
       if (mounted) {

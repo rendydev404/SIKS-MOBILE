@@ -52,45 +52,65 @@ class MainActivity : FlutterActivity() {
                 file
             )
 
-            val intent = Intent(Intent.ACTION_SEND)
-            intent.type = "image/png"
-            intent.putExtra(Intent.EXTRA_STREAM, uri)
-            intent.putExtra(Intent.EXTRA_TEXT, text)
-            
-            // Add ClipData for Android 11+ URI permission
-            intent.clipData = android.content.ClipData.newRawUri("", uri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-            if (phone.isNotEmpty()) {
-                intent.putExtra("jid", "$phone@s.whatsapp.net")
-            }
-
-            // Check if WhatsApp is installed, fallback to WhatsApp Business
-            val pm = packageManager
-            var waPackage = "com.whatsapp"
-            var isInstalled = true
-            try {
-                pm.getPackageInfo(waPackage, android.content.pm.PackageManager.GET_META_DATA)
-            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
-                waPackage = "com.whatsapp.w4b"
-                try {
-                    pm.getPackageInfo(waPackage, android.content.pm.PackageManager.GET_META_DATA)
-                } catch (e2: android.content.pm.PackageManager.NameNotFoundException) {
-                    isInstalled = false
-                }
-            }
-
-            if (!isInstalled) {
+            val waPackage = installedWhatsAppPackage()
+            if (waPackage == null) {
                 result.error("APP_NOT_FOUND", "WhatsApp is not installed", null)
                 return
             }
 
+            // Image and caption in one message. The "jid" extra asks WhatsApp to
+            // skip its contact picker and open the student's chat directly; it
+            // only ever had a chance when the number was actually filled in,
+            // which the page now sends straight from PHP instead of scraping it
+            // back out of the rendered HTML. WhatsApp falls back to the picker
+            // on its own if it does not honour the extra, and the message is
+            // ready to send either way.
+            val intent = Intent(Intent.ACTION_SEND)
+            intent.type = "image/png"
+            intent.putExtra(Intent.EXTRA_STREAM, uri)
+            intent.putExtra(Intent.EXTRA_TEXT, text)
+            intent.clipData = android.content.ClipData.newRawUri("", uri)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             intent.setPackage(waPackage)
+
+            if (phone.isNotEmpty()) {
+                intent.putExtra("jid", phone + "@s.whatsapp.net")
+                // The receipt also goes on the clipboard, so nothing is lost if
+                // WhatsApp drops the attachment on the way to the chat.
+                copyImageToClipboard(uri)
+            }
+
             startActivity(intent)
-            result.success(null)
+            result.success(if (phone.isNotEmpty()) "direct" else "picker")
         } catch (e: Exception) {
             e.printStackTrace()
             result.error("SHARE_ERROR", e.message, null)
         }
+    }
+
+    /** The installed WhatsApp, preferring the regular app over Business. */
+    private fun installedWhatsAppPackage(): String? {
+        val pm = packageManager
+        for (candidate in listOf("com.whatsapp", "com.whatsapp.w4b")) {
+            try {
+                pm.getPackageInfo(candidate, android.content.pm.PackageManager.GET_META_DATA)
+                return candidate
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                // Try the next one.
+            }
+        }
+        return null
+    }
+
+    /**
+     * Puts the receipt on the clipboard. A clipboard URI carries its own read
+     * grant, so WhatsApp can open a file owned by this app's FileProvider.
+     */
+    private fun copyImageToClipboard(uri: Uri) {
+        val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as android.content.ClipboardManager
+        clipboard.setPrimaryClip(
+            android.content.ClipData.newUri(contentResolver, "Kwitansi", uri)
+        )
     }
 }
