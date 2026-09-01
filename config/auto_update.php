@@ -20,7 +20,11 @@ function autoUpdateDatabase($pdo) {
         // 2. Cek dan tambah kolom no_whatsapp di siswa
         $columns = $pdo->query("SHOW COLUMNS FROM siswa LIKE 'no_whatsapp'")->fetch();
         if (!$columns) {
-            $pdo->exec("ALTER TABLE siswa ADD COLUMN no_whatsapp VARCHAR(15) AFTER no_telp");
+            $pdo->exec("ALTER TABLE siswa ADD COLUMN no_whatsapp VARCHAR(20) AFTER no_telp");
+        } else {
+            // VARCHAR(15) memotong nomor yang disimpan dengan format internasional
+            // (mis. "+62 812-3456-7890"), sehingga link WA jadi tidak valid.
+            $pdo->exec("ALTER TABLE siswa MODIFY COLUMN no_whatsapp VARCHAR(20) DEFAULT NULL");
         }
         
         // 3. Cek dan tambah kolom jenis_pembayaran di pembayaran (Ubah ke VARCHAR agar dinamis)

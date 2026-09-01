@@ -107,7 +107,7 @@ class WebViewScreenState extends State<WebViewScreen> {
             }
           },
           onWebResourceError: (error) {
-            if (!error.isForMainFrame) return;
+            if (error.isForMainFrame == false) return;
             if (mounted) {
               _isLoading.value = false;
               _hasError.value = true;
@@ -124,6 +124,8 @@ class WebViewScreenState extends State<WebViewScreen> {
           onMessageReceived: (_) => _sendFcmTokenToWeb())
       ..addJavaScriptChannel('WhatsAppShareChannel',
           onMessageReceived: (m) => _shareToWhatsAppNative(m.message))
+      ..addJavaScriptChannel('ExternalLinkChannel',
+          onMessageReceived: (m) => _handleExternalLinkFromWeb(m.message))
       ..loadRequest(Uri.parse(startUrl));
   }
 
@@ -199,6 +201,25 @@ class WebViewScreenState extends State<WebViewScreen> {
           if (a && /\.(pdf|xlsx|xls|csv|doc|docx)(\?|$)/i.test(a.href)) {
             e.preventDefault();
             window.ShareChannel.postMessage(a.href);
+          }
+        }, true);
+
+        // Link eksternal (WhatsApp / telepon / email). Anchor dengan
+        // target="_blank" tidak memicu navigation delegate di WebView,
+        // sehingga tombol "Tagih"/"Kirim WA" terasa mati kalau tidak
+        // diteruskan manual ke sisi native.
+        document.addEventListener('click', function(e) {
+          var a = e.target.closest('a[href]');
+          if (!a) return;
+          var href = a.getAttribute('href') || '';
+          if (!href || href.charAt(0) === '#') return;
+          if (!/^(https?:\/\/(wa\.me|api\.whatsapp\.com)|whatsapp:|tel:|mailto:)/i.test(href)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.ExternalLinkChannel) {
+            window.ExternalLinkChannel.postMessage(a.href || href);
+          } else {
+            window.location.href = href;
           }
         }, true);
 
@@ -477,14 +498,62 @@ class WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
+  /// Link eksternal (wa.me, tel:, mailto:) yang diklik di dalam halaman web.
+  /// Anchor dengan target="_blank" tidak pernah sampai ke [_handleNavigation],
+  /// jadi halaman web mengirimkannya lewat channel ini.
+  void _handleExternalLinkFromWeb(String url) {
+    if (url.isEmpty) return;
+    final isWa = url.contains('wa.me') ||
+        url.contains('api.whatsapp.com') ||
+        url.contains('whatsapp:');
+    if (isWa &&
+        DateTime.now().difference(_lastWaShareTime).inSeconds < 3) {
+      debugPrint('[WebView] Blocked external WA link, native share in progress');
+      return;
+    }
+    _launchExternal(url);
+  }
+
   Future<void> _launchExternal(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+
+    // canLaunchUrl bisa mengembalikan false walaupun aplikasinya ada
+    // (package visibility Android 11+), jadi jangan dipakai sebagai gerbang.
+    for (final mode in [
+      LaunchMode.externalApplication,
+      LaunchMode.platformDefault,
+    ]) {
+      try {
+        if (await launchUrl(uri, mode: mode)) return;
+      } catch (e) {
+        debugPrint('[WebView] Launch error ($mode): $e');
       }
-    } catch (e) {
-      debugPrint('[WebView] Launch error: $e');
+    }
+
+    // Fallback terakhir untuk WhatsApp: coba skema whatsapp://send
+    if (uri.host == 'wa.me' || uri.host == 'api.whatsapp.com') {
+      final phone = uri.host == 'wa.me'
+          ? uri.pathSegments.join()
+          : (uri.queryParameters['phone'] ?? '');
+      final text = uri.queryParameters['text'] ?? '';
+      final fallback = Uri.parse(
+          'whatsapp://send?phone=$phone&text=${Uri.encodeComponent(text)}');
+      try {
+        if (await launchUrl(fallback, mode: LaunchMode.externalApplication)) {
+          return;
+        }
+      } catch (e) {
+        debugPrint('[WebView] WhatsApp scheme fallback error: $e');
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak ada aplikasi yang bisa membuka tautan ini.'),
+        ),
+      );
     }
   }
 

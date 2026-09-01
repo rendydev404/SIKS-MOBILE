@@ -17,7 +17,7 @@ if (!$type) {
 }
 
 $siswaId = $_SESSION['siswa_id'];
-$siswa = $pdo->prepare("SELECT s.*, k.nama_kelas, k.tingkat FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+$siswa = $pdo->prepare("SELECT s.*, k.nama_kelas, k.tingkat, k.jurusan FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
 $siswa->execute([$siswaId]);
 $siswa = $siswa->fetch();
 
@@ -26,7 +26,7 @@ if (!$siswa) {
     exit;
 }
 
-if (strpos($type, 'Werpak TKJ') !== false && strtoupper($siswa['jurusan'] ?? '') !== 'TKJ') {
+if (isPembayaranKhususTKJ($type) && !isJurusanTKJ($siswa['jurusan'] ?? '')) {
     header('Location: dashboard.php');
     exit;
 }
@@ -56,15 +56,15 @@ $tahunDefault = $startYear;
 if ($tingkatSiswaInfo === 'XI') $tahunDefault = $startYear + 1;
 elseif ($tingkatSiswaInfo === 'XII' || $tingkatSiswaInfo === 'Alumni') $tahunDefault = $startYear + 2;
 
+$tahunFilter = isset($_GET['tahun']) ? (int)$_GET['tahun'] : $tahunDefault;
+
 // Untuk biaya tahunan: pakai tahun pelaksanaan. Untuk sekali bayar: pakai angkatan.
 $isYearly     = isYearlyPayment($type);
-$lookupTahun = $isYearly ? $tahunFilter : $startYear;
+$lookupTahun  = $isYearly ? $tahunFilter : $startYear;
 $nominalWajib = getNominalPembayaran($pdo, $type, $lookupTahun);
 
 // Batas tahun maksimum yang boleh diakses (sesuai kelas saat ini)
 $tahunMax = $tahunDefault;
-
-$tahunFilter = isset($_GET['tahun']) ? (int)$_GET['tahun'] : $tahunDefault;
 
 // Proteksi server-side: blokir akses ke tahun kelas yang belum dijalani
 if ($isYearly && $tahunFilter > $tahunMax) {

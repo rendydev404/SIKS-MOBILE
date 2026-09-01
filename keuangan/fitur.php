@@ -53,7 +53,7 @@ $riwayat = $stmtHist->fetchAll();
 
 // Hitung Status per Siswa (Filtered by Year)
 $stmtStatus = $pdo->prepare("
-    SELECT s.id, s.nama, s.nis, s.no_whatsapp, k.nama_kelas, 
+    SELECT s.id, s.nama, s.nis, s.no_whatsapp, s.tahun_masuk, k.nama_kelas, 
            IFNULL(SUM(CASE WHEN p.status = 'lunas' THEN p.jumlah_bayar ELSE 0 END), 0) as total_bayar,
            IFNULL(SUM(CASE WHEN p.status = 'pending' THEN 1 ELSE 0 END), 0) as has_pending
     FROM siswa s 
@@ -456,7 +456,7 @@ include '../includes/header.php';
                 </thead>
                 <tbody>
                     <?php if (empty($siswaBelum)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Semua siswa sudah lunas!</td></tr>
+                        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Semua siswa sudah lunas!</td></tr>
                     <?php endif; ?>
                     <?php foreach ($siswaBelum as $s): ?>
                     <tr>
@@ -473,6 +473,7 @@ include '../includes/header.php';
                                 <span class="badge badge-danger">Belum Ada</span>
                             <?php endif; ?>
                         </td>
+                        <td style="text-align: center;">
                             <?php 
                             $wa = formatNomorWA($s['no_whatsapp'] ?? '');
                             

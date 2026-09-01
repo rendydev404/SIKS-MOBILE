@@ -19,7 +19,7 @@ if (!isset($_SESSION['siswa_id'])) {
 $siswaId = $_SESSION['siswa_id'];
 
 // Get data siswa
-$stmt = $pdo->prepare("SELECT s.*, k.nama_kelas, k.tingkat FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+$stmt = $pdo->prepare("SELECT s.*, k.nama_kelas, k.tingkat, k.jurusan FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
 $stmt->execute([$siswaId]);
 $siswa = $stmt->fetch();
 
@@ -32,7 +32,7 @@ if (!$siswa) {
 $type         = $_GET['type'] ?? 'SPP';
 $tahunFromUrl = isset($_GET['tahun']) ? (int)$_GET['tahun'] : null;
 
-if (strpos($type, 'Werpak TKJ') !== false && strtoupper($siswa['jurusan'] ?? '') !== 'TKJ') {
+if (isPembayaranKhususTKJ($type) && !isJurusanTKJ($siswa['jurusan'] ?? '')) {
     header('Location: dashboard.php');
     exit;
 }

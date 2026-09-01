@@ -401,9 +401,10 @@ $pesan .= "*SeaBank: 901612378561 a.n Mira Humairoh*\n\n";
 $pesan .= "Mohon kirimkan bukti transfer setelah melakukan pembayaran. Atas perhatiannya kami ucapkan terima kasih.\n";
 $pesan .= "Wassalamu'alaikum Warahmatullahi Wabarakatuh.\n\n";
 $pesan .= "*Keuangan SMK Al Amin*";
-$noWa = preg_replace('/[^0-9]/', '', $siswa['no_whatsapp'] ?? '');
-if (substr($noWa, 0, 1) == '0') $noWa = '62' . substr($noWa, 1);
-$waLink = "https://wa.me/" . $noWa . "?text=" . urlencode($pesan);
+$noWa = formatNomorWA($siswa['no_whatsapp'] ?? '');
+$waLink = $noWa
+    ? "https://wa.me/" . $noWa . "?text=" . urlencode($pesan)
+    : "https://api.whatsapp.com/send?text=" . urlencode($pesan);
 ?>
 
 <script>

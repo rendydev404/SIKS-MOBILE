@@ -212,9 +212,7 @@ include '../includes/header.php';
                         // Jika tidak ada tunggakan, SKIP siswa ini (Sembunyikan yg lunas)
                         if ($tunggakan <= 0) continue;
 
-                        $noWa = $siswa['no_whatsapp'] ?? '';
-                        $noWa = preg_replace('/[^0-9]/', '', $noWa);
-                        if (substr($noWa, 0, 1) == '0') $noWa = '62' . substr($noWa, 1);
+                        $noWa = formatNomorWA($siswa['no_whatsapp'] ?? '');
                     ?>
                     <tr class="invoice-row" data-search="<?= e(strtolower($siswa['nis'] . ' ' . $siswa['nama'])) ?>">
                         <td style="text-align: center;"><?= $no++ ?></td>

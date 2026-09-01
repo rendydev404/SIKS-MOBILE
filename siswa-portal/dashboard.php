@@ -416,7 +416,7 @@ body:not(.light-mode) .spp-badge.warn { background: rgba(239,68,68,0.1); border-
         <div class="pay-grid">
         <?php foreach ($items as $name => $config):
             // Sembunyikan Werpak TKJ jika jurusan bukan TKJ
-            if (strpos($name, 'Werpak TKJ') !== false && strtoupper($siswa['jurusan'] ?? '') !== 'TKJ') continue;
+            if (isPembayaranKhususTKJ($name) && !isJurusanTKJ($siswa['jurusan'] ?? '')) continue;
             
             $sk = $dataTunggakanSpp['categories'][$name] ?? 'belum';
             if ($sk==='lunas') { $pillClass='pill-lunas'; $pillIcon='fa-check-circle'; $pillTxt='Lunas'; }

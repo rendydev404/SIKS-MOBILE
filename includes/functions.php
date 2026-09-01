@@ -272,7 +272,11 @@ function cekPembayaran($pdo, $siswaId, $bulan, $tahun, $jenis = 'SPP', $tahun_ma
     $nominalTagihan = (float)getNominalPembayaran($pdo, $jenis, $tahun_masuk, $bulan, $tahun);
     
     $status = 'belum';
-    if ($totalLunas >= $nominalTagihan) {
+    if ($nominalTagihan <= 0) {
+        // Tarif belum ditentukan admin. Jangan pernah dianggap lunas otomatis,
+        // supaya tidak muncul "ceklis" palsu di dashboard siswa.
+        $status = ($totalSemua > 0) ? 'nyicil' : 'belum';
+    } elseif ($totalLunas >= $nominalTagihan) {
         $status = 'lunas';
     } elseif ($totalPending > 0 && $totalSemua >= $nominalTagihan) {
         $status = 'pending'; // Sudah bayar cukup, tapi ada yang masih pending
@@ -401,7 +405,7 @@ function hitungTunggakan($pdo, $siswaId, $getDetails = false, $targetMonth = nul
     foreach ($categories as $group => $items) {
         foreach ($items as $name => $meta) {
             // --- Aturan filter kelas/jurusan ---
-            if (str_contains($name, 'Werpak TKJ') && $jurusanSiswa !== 'TKJ') continue;
+            if (isPembayaranKhususTKJ($name) && !isJurusanTKJ($jurusanSiswa)) continue;
             
             // Filter berdasarkan kelas
             if (str_contains($name, '(Kelas 10)') && !in_array($tingkatSiswa, ['X', 'XI', 'XII', 'Alumni'])) continue;
@@ -413,11 +417,14 @@ function hitungTunggakan($pdo, $siswaId, $getDetails = false, $targetMonth = nul
             }
             // -----------------------------------
 
-            $catStatus = 'lunas';
-            $catTotalSisa = 0;
-
             // Biaya sekali bayar (Karena yearly sudah dihapus, masuk kesini semua)
             $cek = cekPembayaran($pdo, $siswaId, null, null, $name, $startYear);
+
+            // Status kategori selalu mengikuti hasil cek. Kalau tarifnya belum
+            // diatur (0), cekPembayaran mengembalikan 'belum' sehingga item tidak
+            // pernah tampil "lunas" padahal siswa belum bayar apa pun.
+            $catStatus = $cek['status'];
+
             if ($cek['sisa'] > 0) {
                 $totalDebt += $cek['sisa'];
                 $tunggakanLainnya[] = [
@@ -425,7 +432,6 @@ function hitungTunggakan($pdo, $siswaId, $getDetails = false, $targetMonth = nul
                     'sisa'   => $cek['sisa'],
                     'status' => $cek['status']
                 ];
-                $catStatus = $cek['status'];
             }
             $categorySummary[$name] = $catStatus;
         }
@@ -458,17 +464,52 @@ function generateNoTransaksi() {
  * Mengubah awalan 08 menjadi 628.
  */
 function formatNomorWA($nomor) {
-    if (empty($nomor)) return null;
-    
-    // Hapus semua karakter non-digit (kecuali plus di awal jika ada, tapi kita nggah butuh plus buat link WA)
-    $clean = preg_replace('/[^0-9]/', '', $nomor);
-    
-    // Jika diawali 0, ganti dengan 62
-    if (strpos($clean, '0') === 0) {
-        $clean = '62' . substr($clean, 1);
+    if ($nomor === null) return null;
+
+    // Hapus semua karakter non-digit (spasi, strip, kurung, tanda plus)
+    $clean = preg_replace('/[^0-9]/', '', (string)$nomor);
+    if ($clean === '') return null;
+
+    // Buang prefix internasional "00" (contoh: 00628123...)
+    if (strpos($clean, '00') === 0) {
+        $clean = substr($clean, 2);
     }
-    
+
+    if (strpos($clean, '620') === 0) {
+        // Salah input: 62 + 08xxx -> 62 + 8xxx
+        $clean = '62' . substr($clean, 3);
+    } elseif (strpos($clean, '0') === 0) {
+        // Lokal: 08xxx -> 628xxx
+        $clean = '62' . substr($clean, 1);
+    } elseif (strpos($clean, '8') === 0) {
+        // Tanpa awalan sama sekali: 8xxx -> 628xxx
+        $clean = '62' . $clean;
+    }
+
+    // Nomor WA Indonesia yang valid: 62 + 9..13 digit
+    if (strpos($clean, '62') !== 0 || strlen($clean) < 11 || strlen($clean) > 15) {
+        return null;
+    }
+
     return $clean;
+}
+
+/**
+ * Cek apakah jurusan siswa/kelas adalah TKJ.
+ * Toleran terhadap variasi penulisan ("TKJ", "tkj", "Teknik Komputer dan Jaringan").
+ */
+function isJurusanTKJ($jurusan) {
+    $j = strtoupper(trim((string)$jurusan));
+    if ($j === '') return false;
+    if (strpos($j, 'TKJ') !== false) return true;
+    return (strpos($j, 'KOMPUTER') !== false && strpos($j, 'JARINGAN') !== false);
+}
+
+/**
+ * Cek apakah jenis pembayaran khusus jurusan TKJ (Werpak).
+ */
+function isPembayaranKhususTKJ($jenis) {
+    return stripos((string)$jenis, 'Werpak') !== false;
 }
 
 /**
