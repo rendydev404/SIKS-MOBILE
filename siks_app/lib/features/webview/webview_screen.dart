@@ -34,6 +34,10 @@ class WebViewScreenState extends State<WebViewScreen>
   /// retry button instead of an empty WebView canvas.
   static const Duration _loadTimeout = Duration(seconds: 25);
 
+  /// How long a navigation may run before the overlay appears. Most page
+  /// changes finish well inside this, so they stay visually uninterrupted.
+  static const Duration _overlayDelay = Duration(milliseconds: 600);
+
   late final WebViewController _controller;
   final ImagePicker _imagePicker = ImagePicker();
   static const MethodChannel _waChannel = MethodChannel('id.smkalamin.siks/whatsapp');
@@ -43,6 +47,7 @@ class WebViewScreenState extends State<WebViewScreen>
   final ValueNotifier<bool> _isOffline = ValueNotifier(false);
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _loadTimeoutTimer;
+  Timer? _overlayDelayTimer;
   bool _hasCompletedInitialLoad = false;
   bool _reportedFirstPageFinished = false;
   int _blankPageRecoveries = 0;
@@ -53,6 +58,7 @@ class WebViewScreenState extends State<WebViewScreen>
     FcmService.instance.onTokenAvailable = null;
     _connectivitySubscription?.cancel();
     _loadTimeoutTimer?.cancel();
+    _overlayDelayTimer?.cancel();
     _isLoading.dispose();
     _hasError.dispose();
     _isOffline.dispose();
@@ -113,15 +119,13 @@ class WebViewScreenState extends State<WebViewScreen>
           onPageStarted: (_) {
             if (!mounted) return;
             _hasError.value = false;
-            // The WebView clears the old page as soon as a navigation starts,
-            // so every navigation - not just the first - needs the overlay.
-            // Without it a login POST that stalls looks like a blank screen.
-            _isLoading.value = true;
+            _showOverlayIfSlow();
             _startLoadTimeout();
           },
           onPageFinished: (_) {
             _hasCompletedInitialLoad = true;
             _loadTimeoutTimer?.cancel();
+            _overlayDelayTimer?.cancel();
             if (mounted) _isLoading.value = false;
             _injectBridge();
             unawaited(_sendFcmTokenToWeb());
@@ -135,6 +139,7 @@ class WebViewScreenState extends State<WebViewScreen>
           onWebResourceError: (error) {
             if (error.isForMainFrame == false) return;
             _loadTimeoutTimer?.cancel();
+            _overlayDelayTimer?.cancel();
             if (mounted) {
               _isLoading.value = false;
               _hasError.value = true;
@@ -160,6 +165,22 @@ class WebViewScreenState extends State<WebViewScreen>
   // Blank-page recovery
   // ─────────────────────────────────────────────────────────────────────────
 
+  /// The WebView clears the old page the moment a navigation starts, so a
+  /// slow one shows as a bare white canvas. Cover that with the overlay - but
+  /// only once the navigation is actually slow, otherwise ordinary page
+  /// changes flash the overlay for a few frames each time.
+  void _showOverlayIfSlow() {
+    _overlayDelayTimer?.cancel();
+    if (!_hasCompletedInitialLoad) {
+      // Cold start has nothing to show yet, so do not hold back.
+      _isLoading.value = true;
+      return;
+    }
+    _overlayDelayTimer = Timer(_overlayDelay, () {
+      if (mounted) _isLoading.value = true;
+    });
+  }
+
   /// Fails a navigation that never finishes, instead of leaving an empty
   /// WebView on screen with no way back.
   void _startLoadTimeout() {
@@ -181,6 +202,8 @@ class WebViewScreenState extends State<WebViewScreen>
         : current;
     if (!mounted) return;
     _hasError.value = false;
+    // An explicit retry deserves immediate feedback.
+    _overlayDelayTimer?.cancel();
     _isLoading.value = true;
     _startLoadTimeout();
     await _controller.loadRequest(Uri.parse(target));
