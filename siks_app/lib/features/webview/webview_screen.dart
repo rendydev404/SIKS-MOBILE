@@ -51,6 +51,7 @@ class WebViewScreenState extends State<WebViewScreen>
   bool _hasCompletedInitialLoad = false;
   bool _reportedFirstPageFinished = false;
   int _blankPageRecoveries = 0;
+  bool _fcmTokenRegistered = false;
 
   @override
   void dispose() {
@@ -69,7 +70,11 @@ class WebViewScreenState extends State<WebViewScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    FcmService.instance.onTokenAvailable = (_) => unawaited(_sendFcmTokenToWeb());
+    FcmService.instance.onTokenAvailable = (_) {
+      // A refreshed token has to reach the server even if one was already sent.
+      _fcmTokenRegistered = false;
+      unawaited(_sendFcmTokenToWeb());
+    };
     _checkConnectivity();
     _initWebView();
   }
@@ -122,14 +127,14 @@ class WebViewScreenState extends State<WebViewScreen>
             _showOverlayIfSlow();
             _startLoadTimeout();
           },
-          onPageFinished: (_) {
+          onPageFinished: (url) {
             _hasCompletedInitialLoad = true;
             _loadTimeoutTimer?.cancel();
             _overlayDelayTimer?.cancel();
             if (mounted) _isLoading.value = false;
-            _injectBridge();
-            unawaited(_sendFcmTokenToWeb());
-            _injectImageCaptureScript();
+            // One JavaScript round trip per page instead of three.
+            unawaited(_injectBridge());
+            unawaited(_sendFcmTokenToWeb(url));
             unawaited(_recoverIfBlank());
             if (!_reportedFirstPageFinished) {
               _reportedFirstPageFinished = true;
@@ -153,7 +158,10 @@ class WebViewScreenState extends State<WebViewScreen>
       ..addJavaScriptChannel('CameraChannel',
           onMessageReceived: (_) => _showImageSourceDialog())
       ..addJavaScriptChannel('NotificationChannel',
-          onMessageReceived: (_) => _sendFcmTokenToWeb())
+          onMessageReceived: (_) {
+            _fcmTokenRegistered = false;
+            unawaited(_sendFcmTokenToWeb());
+          })
       ..addJavaScriptChannel('WhatsAppShareChannel',
           onMessageReceived: (m) => _shareToWhatsAppNative(m.message))
       ..addJavaScriptChannel('ExternalLinkChannel',
@@ -344,14 +352,7 @@ class WebViewScreenState extends State<WebViewScreen>
           window.NotificationChannel.postMessage('request_token');
         }
       })();
-    ''');
-  }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Image Capture Injection (Intercept WA button)
-  // ─────────────────────────────────────────────────────────────────────────
-  void _injectImageCaptureScript() {
-    _controller.runJavaScript('''
       (function() {
         if (window._siksImageInjected) return;
         window._siksImageInjected = true;
@@ -403,10 +404,10 @@ class WebViewScreenState extends State<WebViewScreen>
                 // usually inside a window.location.href or similar
                 // We'll extract it directly from the html content if possible
                 var pageHtml = document.documentElement.innerHTML;
-                var waMatch = pageHtml.match(/https:\\/\\/wa\\.me\\/([0-9]+)\\?text=([^"']+)/);
+                var waMatch = pageHtml.match(/https:\/\/wa\.me\/([0-9]+)\?text=([^"']+)/);
                 if (waMatch && waMatch.length >= 3) {
                     phone = waMatch[1];
-                    text = decodeURIComponent(waMatch[2].replace(/\\+/g, ' '));
+                    text = decodeURIComponent(waMatch[2].replace(/\+/g, ' '));
                 }
                 
                 // Send to Flutter
@@ -436,10 +437,27 @@ class WebViewScreenState extends State<WebViewScreen>
   // ─────────────────────────────────────────────────────────────────────────
   // FCM token → web
   // ─────────────────────────────────────────────────────────────────────────
-  Future<void> _sendFcmTokenToWeb() async {
-    // The registration endpoint relies on the current WebView login cookie.
-    // A token arriving before the first page is loaded is sent onPageFinished.
+
+  /// The login page is the only place the app can tell it is logged out.
+  bool _isLoginPage(String? url) {
+    if (url == null) return false;
+    final path = Uri.tryParse(url)?.path ?? '';
+    return path.isEmpty || path == '/' || path.endsWith('/index.php');
+  }
+
+  /// Registers the device once per login instead of on every page change.
+  /// The old code re-ran getToken and fired an HTTP POST on each navigation,
+  /// competing with the page's own requests every single time.
+  Future<void> _sendFcmTokenToWeb([String? url]) async {
     if (!_hasCompletedInitialLoad) return;
+    if (_isLoginPage(url)) {
+      // Back at the login page means logged out: register again next login.
+      _fcmTokenRegistered = false;
+      return;
+    }
+    if (_fcmTokenRegistered) return;
+
+    // The registration endpoint relies on the current WebView login cookie.
     final token = await FcmService.instance.currentToken;
     if (token != null) {
       final encodedToken = jsonEncode(token);
@@ -453,6 +471,7 @@ class WebViewScreenState extends State<WebViewScreen>
           }).catch(function(error) { console.debug('FCM token registration failed', error); });
         })();
       ''');
+      _fcmTokenRegistered = true;
     }
   }
 
