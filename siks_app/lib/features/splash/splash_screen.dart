@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
+import '../../widgets/loading_overlay.dart';
 
 /// A minimal hand-off from Android's native splash to the first app screen.
 /// Keeping this screen static avoids an extra multi-second animation before the
@@ -44,6 +45,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(backgroundColor: Color(0xFFF8FAFC));
+    // Draws the logo and a spinner rather than an empty Scaffold. An empty one
+    // is indistinguishable from the app having rendered nothing at all, which
+    // made every startup problem look like the same white screen.
+    return const Scaffold(
+      backgroundColor: Color(0xFFF8FAFC),
+      body: LoadingOverlay(),
+    );
   }
 }
