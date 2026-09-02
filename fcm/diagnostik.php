@@ -18,8 +18,8 @@ checkRole(['admin']);
 ensureAnnouncementNotificationSchema($pdo);
 
 $checks = [];
-function tambahCek(&$checks, $label, $ok, $detail) {
-    $checks[] = ['label' => $label, 'ok' => $ok, 'detail' => $detail];
+function tambahCek(&$checks, $label, $ok, $detail, $opsional = false) {
+    $checks[] = ['label' => $label, 'ok' => $ok, 'detail' => $detail, 'opsional' => $opsional];
 }
 
 // 1. Konfigurasi. Nilai rahasia tidak pernah ditampilkan, hanya statusnya.
@@ -52,7 +52,9 @@ if ($saPath === '') {
     // di luar DOCUMENT_ROOT. Jadi yang diperiksa adalah ada tidaknya segmen
     // public_html di dalam path.
     $saReal = realpath($saPath);
-    $diWebRoot = $saReal && preg_match('#[/\\]public_html[/\\]#', $saReal);
+    // Tidak perlu regex: cukup samakan pemisah folder lalu cari segmennya.
+    $saNormal = $saReal ? str_replace(DIRECTORY_SEPARATOR, '/', $saReal) : '';
+    $diWebRoot = $saNormal !== '' && strpos($saNormal, '/public_html/') !== false;
     if ($valid && $diWebRoot) {
         tambahCek($checks, 'Keamanan service account', false,
             'File berada di dalam web root sehingga bisa diunduh siapa pun lewat browser. Pindahkan ke luar public_html dan perbarui path-nya.');
@@ -66,7 +68,7 @@ if ($saPath === '') {
 $cronSecretDiset = FCM_CRON_SECRET !== 'GANTI_DENGAN_SECRET_CRON_YANG_PANJANG';
 tambahCek($checks, 'FCM_CRON_SECRET', $cronSecretDiset,
     $cronSecretDiset ? 'Sudah diset. Dipakai mengamankan cron pengumuman.'
-                     : 'Masih nilai bawaan, sehingga process_queue.php selalu menolak cron dengan 403. Isi di config/firebase.local.php.');
+                     : 'Masih nilai bawaan, sehingga cron pengumuman ditolak 403. Opsional - pengumuman tetap terkirim seketika dari halaman admin, cron hanya jaring pengaman untuk percobaan ulang. Isi lewat config/firebase.secret.php di server.', true);
 
 // 2. Kredensial benar-benar diterima Google?
 $accessToken = fcmAccessToken();
@@ -102,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test'
     } else {
         $pesan = [];
         $semuaBerhasil = true;
+        $mati = 0;
         foreach ($myTokens as $t) {
             $r = sendFCMNotification($t, 'Tes Notifikasi SIKS',
                 'Kalau pesan ini muncul, jalur notifikasi sudah berfungsi.', [
@@ -110,10 +113,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test'
                 ]);
             if ($r['success']) {
                 $pesan[] = 'Terkirim ke satu perangkat (HTTP ' . $r['http_code'] . ').';
+            } elseif (!empty($r['invalid_token'])) {
+                // Token sisa aplikasi yang sudah di-uninstall atau dipasang
+                // ulang. Dinonaktifkan supaya hitungan perangkat jujur dan
+                // pengiriman berikutnya tidak membuang waktu ke sana.
+                $pdo->prepare('UPDATE fcm_devices SET is_active = 0 WHERE fcm_token = ?')->execute([$t]);
+                $mati++;
             } else {
                 $semuaBerhasil = false;
                 $pesan[] = 'Gagal: ' . $r['error'] . ' (HTTP ' . $r['http_code'] . ').';
             }
+        }
+        if ($mati > 0) {
+            $pesan[] = $mati . ' token lama sudah tidak terdaftar (aplikasi di-uninstall atau dipasang ulang) dan dinonaktifkan.';
         }
         $testResult = ['ok' => $semuaBerhasil, 'pesan' => implode(' ', $pesan)];
     }
@@ -125,7 +137,7 @@ $errors = $pdo->query("SELECT pengumuman_id, attempts, last_error, updated_at FR
 
 $semuaOk = true;
 foreach ($checks as $c) {
-    if (!$c['ok']) $semuaOk = false;
+    if (!$c['ok'] && empty($c['opsional'])) $semuaOk = false;
 }
 ?>
 <!DOCTYPE html>
@@ -145,6 +157,7 @@ foreach ($checks as $c) {
   .badge { flex: none; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 700; }
   .ok { background: #10b981; }
   .bad { background: #ef4444; }
+  .warn { background: #f59e0b; }
   .label { font-weight: 600; font-size: 14px; }
   .detail { color: #475569; font-size: 13px; margin-top: 2px; word-break: break-word; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -173,7 +186,7 @@ foreach ($checks as $c) {
   <div class="card">
     <?php foreach ($checks as $c): ?>
       <div class="row">
-        <span class="badge <?= $c['ok'] ? 'ok' : 'bad' ?>"><?= $c['ok'] ? 'v' : '!' ?></span>
+        <span class="badge <?= $c['ok'] ? 'ok' : (empty($c['opsional']) ? 'bad' : 'warn') ?>"><?= $c['ok'] ? 'v' : '!' ?></span>
         <div>
           <div class="label"><?= e($c['label']) ?></div>
           <div class="detail"><?= e($c['detail']) ?></div>
