@@ -25,11 +25,13 @@ function tambahCek(&$checks, $label, $ok, $detail) {
 // 1. Konfigurasi. Nilai rahasia tidak pernah ditampilkan, hanya statusnya.
 $projectId = FCM_PROJECT_ID;
 tambahCek($checks, 'FCM_PROJECT_ID', $projectId !== '',
-    $projectId !== '' ? $projectId : 'Belum diset pada environment hosting.');
+    $projectId !== '' ? $projectId
+        : 'Belum diisi. Set lewat environment hosting, atau isi config/firebase.local.php (salin dari firebase.local.example.php).');
 
 $saPath = FCM_SERVICE_ACCOUNT_PATH;
 if ($saPath === '') {
-    tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', false, 'Belum diset pada environment hosting.');
+    tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', false,
+        'Belum diisi. Unduh service-account JSON dari Firebase Console, taruh di luar public_html, lalu tulis path-nya di config/firebase.local.php.');
 } elseif (!is_readable($saPath)) {
     tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', false, 'Sudah diset, tetapi file tidak ditemukan atau tidak bisa dibaca.');
 } else {
@@ -38,6 +40,12 @@ if ($saPath === '') {
     tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', $valid,
         $valid ? 'Terbaca. Service account: ' . $sa['client_email']
                : 'File terbaca tetapi bukan service-account JSON yang valid.');
+    $docRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '');
+    $saReal = realpath($saPath);
+    if ($valid && $docRoot && $saReal && strpos($saReal, $docRoot) === 0) {
+        tambahCek($checks, 'Keamanan service account', false,
+            'File berada di dalam web root sehingga bisa diunduh siapa pun lewat browser. Pindahkan ke luar public_html dan perbarui path-nya.');
+    }
     if ($valid && $projectId !== '' && !empty($sa['project_id']) && $sa['project_id'] !== $projectId) {
         tambahCek($checks, 'Kecocokan project', false,
             'FCM_PROJECT_ID (' . $projectId . ') berbeda dari project_id pada service account (' . $sa['project_id'] . ').');
@@ -47,7 +55,7 @@ if ($saPath === '') {
 $cronSecretDiset = FCM_CRON_SECRET !== 'GANTI_DENGAN_SECRET_CRON_YANG_PANJANG';
 tambahCek($checks, 'FCM_CRON_SECRET', $cronSecretDiset,
     $cronSecretDiset ? 'Sudah diset. Dipakai mengamankan cron pengumuman.'
-                     : 'Masih nilai bawaan, sehingga process_queue.php selalu menolak cron dengan 403.');
+                     : 'Masih nilai bawaan, sehingga process_queue.php selalu menolak cron dengan 403. Isi di config/firebase.local.php.');
 
 // 2. Kredensial benar-benar diterima Google?
 $accessToken = fcmAccessToken();

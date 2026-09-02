@@ -6,7 +6,10 @@ Tambahkan Cron Job Hostinger setiap 5 menit dengan URL berikut:
 https://sikssmkalamin.absensismkalamin.my.id/fcm/process_queue.php?key=SECRET_CRON
 ```
 
-Sebelum mengaktifkan Cron, atur tiga environment variable pada hosting:
+Sebelum mengaktifkan Cron, isi tiga nilai berikut. Kalau hosting menyediakan
+environment variable, pakai itu. Kalau tidak (paket shared Hostinger umumnya
+tidak menyediakannya untuk PHP), salin `config/firebase.local.example.php`
+menjadi `config/firebase.local.php` lalu isi di sana:
 
 - `FCM_PROJECT_ID`: Firebase project ID dari `google-services.json`.
 - `FCM_SERVICE_ACCOUNT_PATH`: path absolut service-account JSON yang berada di luar `public_html`.
