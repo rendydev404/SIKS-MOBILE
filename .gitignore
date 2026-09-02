@@ -1,4 +1,5 @@
 
 # Kredensial Firebase - jangan pernah masuk Git
-config/firebase.local.php
+config/firebase.secret.php
 *service-account*.json
+service.json

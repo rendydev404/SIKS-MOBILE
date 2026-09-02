@@ -30,8 +30,15 @@ tambahCek($checks, 'FCM_PROJECT_ID', $projectId !== '',
 
 $saPath = FCM_SERVICE_ACCOUNT_PATH;
 if ($saPath === '') {
+    $dicari = [];
+    $localCfg = is_readable(__DIR__ . '/../config/firebase.local.php')
+        ? require __DIR__ . '/../config/firebase.local.php' : [];
+    $kandidat = $localCfg['service_account_path'] ?? [];
+    foreach ((array) $kandidat as $k) { $dicari[] = $k; }
     tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', false,
-        'Belum diisi. Unduh service-account JSON dari Firebase Console, taruh di luar public_html, lalu tulis path-nya di config/firebase.local.php.');
+        'File service account tidak ditemukan. Sudah dicari di: '
+        . ($dicari ? implode(' , ', $dicari) : '(tidak ada kandidat)')
+        . ' -- taruh service.json di salah satunya, atau sesuaikan daftarnya di config/firebase.local.php.');
 } elseif (!is_readable($saPath)) {
     tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', false, 'Sudah diset, tetapi file tidak ditemukan atau tidak bisa dibaca.');
 } else {
