@@ -363,7 +363,11 @@ class WebViewScreenState extends State<WebViewScreen>
   bool _isLoginPage(String? url) {
     if (url == null) return false;
     final path = Uri.tryParse(url)?.path ?? '';
-    return path.isEmpty || path == '/' || path.endsWith('/index.php');
+    // Only the site root is the login screen. Matching any path ending in
+    // index.php also caught /pengumuman/index.php, /pembayaran/index.php and
+    // most other admin pages, so opening one looked like a logout and threw
+    // away the device registration.
+    return path.isEmpty || path == '/' || path == '/index.php';
   }
 
   /// Registers the device once per login instead of on every page change.
