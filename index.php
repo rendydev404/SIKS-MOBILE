@@ -175,7 +175,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <?php if (!$isNativeApp): ?>
                 <div class="app-download">
-                    <a href="downloads/siks-al-amin.apk" class="btn btn-secondary btn-block" download>
+                    <?php
+                    // Dilayani lewat GitHub Releases, bukan dari hosting ini.
+                    // APK-nya 49 MB; menyimpannya di repo akan menambah
+                    // ukuran itu ke riwayat git secara permanen tiap rilis.
+                    // URL "latest" selalu menunjuk rilis terbaru, jadi baris
+                    // ini tidak perlu diubah lagi setiap kali APK diperbarui -
+                    // cukup terbitkan rilis baru dengan nama berkas yang sama.
+                    $apkUrl = 'https://github.com/rendydev404/SIKS-MOBILE/releases/latest/download/siks-al-amin.apk';
+                    ?>
+                    <a href="<?= e($apkUrl) ?>" class="btn btn-secondary btn-block" rel="noopener">
                         <i class="fab fa-android" aria-hidden="true"></i>
                         Download Aplikasi Android
                     </a>
