@@ -53,7 +53,13 @@ class FcmService {
   FcmService._();
   static final FcmService instance = FcmService._();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  /// Resolved on use, never when the singleton is built. As a field
+  /// initializer this ran the moment anything touched FcmService.instance -
+  /// WebViewScreen does so in initState - and reading FirebaseMessaging.instance
+  /// before Firebase.initializeApp() has finished throws [core/no-app], which
+  /// killed the whole app on any launch where the WebView won that race.
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
+
   final FlutterLocalNotificationsPlugin _localNotif =
       FlutterLocalNotificationsPlugin();
 
@@ -191,5 +197,10 @@ class FcmService {
     onTokenAvailable?.call(token);
   }
 
-  Future<String?> get currentToken async => _messaging.getToken();
+  Future<String?> get currentToken async {
+    // Callers reach this from the WebView, which does not know or care whether
+    // Firebase has finished starting.
+    await initializeFirebase();
+    return _messaging.getToken();
+  }
 }
