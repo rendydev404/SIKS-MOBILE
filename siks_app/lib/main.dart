@@ -14,16 +14,29 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Start Firebase in parallel with Flutter's first frame. FCM waits for this
-  // shared initialization before it accesses Firebase APIs.
-  unawaited(initializeFirebase());
-
-  // Register background message handler (must be top-level)
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // Firebase still starts in parallel with Flutter's first frame, but the
+  // background handler is registered only once it is ready: reading
+  // FirebaseMessaging.instance throws while the default app does not exist,
+  // and every line here runs before runApp - an exception at this point means
+  // no widget is ever built and the app shows nothing but a white screen.
+  // Android normally creates the default app through its own content provider
+  // before Dart starts, which is why the old order usually survived, but that
+  // is not something to depend on.
+  unawaited(
+    initializeFirebase().then((_) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    }).catchError((Object error) {
+      debugPrint('[Startup] Firebase init failed: $error');
+    }),
+  );
 
   // Channels have to exist before the first message arrives, otherwise Android
   // drops it without a trace. Cheap, and independent of Firebase being ready.
-  unawaited(ensureNotificationChannels());
+  unawaited(
+    ensureNotificationChannels().catchError((Object error) {
+      debugPrint('[Startup] Notification channels failed: $error');
+    }),
+  );
 
   runApp(const SiksApp());
 }
