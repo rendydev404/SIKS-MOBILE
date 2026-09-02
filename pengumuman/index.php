@@ -7,6 +7,7 @@
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/announcement_notifications.php';
+require_once '../includes/announcement_dispatch.php';
 checkLogin();
 checkRole(['admin']);
 ensureAnnouncementNotificationSchema($pdo);
@@ -54,13 +55,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $isNewlyPublished = (bool) $isActive;
                 $message = 'Pengumuman berhasil ditambahkan!';
             }
+            $queued = 0;
             if ($isNewlyPublished) {
                 $queued = queueAnnouncementNotification($pdo, $announcementId);
-                $message .= ' Notifikasi untuk ' . $queued . ' perangkat siswa telah masuk antrean.';
             } elseif ($action === 'edit' && !$isActive) {
                 $message .= ' Pengumuman nonaktif, tidak ada notifikasi dikirim.';
             }
             $pdo->commit();
+
+            if ($queued > 0) {
+                // Kirim sekarang juga, jangan menunggu putaran cron berikutnya.
+                // Dibatasi jumlah dan waktu supaya admin tidak menatap layar
+                // loading saat siswanya banyak; sisanya tetap aman di antrean
+                // dan diambil cron. Dijalankan setelah commit agar transaksi
+                // admin tidak menahan kunci selama panggilan HTTP ke Google.
+                // Pengumumannya sendiri sudah tersimpan. Kegagalan kirim tidak
+                // boleh dilaporkan sebagai gagal simpan, jadi ditangani di sini
+                // dan tidak dibiarkan jatuh ke catch di bawah.
+                try {
+                    $hasil = processAnnouncementDeliveries($pdo, 40, $announcementId, 8.0);
+                    $tertunda = $queued - $hasil['sent'];
+                    $message .= ' Notifikasi terkirim ke ' . $hasil['sent'] . ' dari ' . $queued . ' perangkat siswa.';
+                    if ($tertunda > 0) {
+                        $message .= ' Sisanya ' . $tertunda . ' menyusul lewat antrean.';
+                    }
+                } catch (Exception $e) {
+                    error_log('Kirim notifikasi pengumuman: ' . $e->getMessage());
+                    $message .= ' Notifikasi masuk antrean untuk ' . $queued . ' perangkat siswa.';
+                }
+            }
             setAlert('success', $message);
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
