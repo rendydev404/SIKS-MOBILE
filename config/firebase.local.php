@@ -12,24 +12,34 @@
  *      Lihat catatan di bawah.
  */
 
-// Satu tingkat di atas public_html. __DIR__ adalah public_html/config, jadi dua
-// tingkat naik dari sini. Dipakai supaya path tetap benar baik saat diakses
-// lewat web maupun saat cron dijalankan dari CLI.
-$diLuarWebRoot = dirname(dirname(__DIR__));
+// Aplikasi ini bisa berada langsung di public_html, atau di dalam folder
+// subdomain seperti public_html/sikssmkalamin. Jumlah tingkat menuju home
+// direktori jadi berbeda, jadi jangan dipatok: telusuri ke atas beberapa
+// tingkat dan kumpulkan semua lokasi yang masuk akal.
+$naik = dirname(__DIR__);
+$folderNaik = [];
+for ($i = 0; $i < 4; $i++) {
+    $naik = dirname($naik);
+    $folderNaik[] = $naik;
+}
+// Dibalik supaya yang terjauh dari web root dicoba lebih dulu. Kalau ada dua
+// salinan, yang di luar public_html yang menang - bukan yang bisa diunduh
+// publik.
+$folderNaik = array_reverse($folderNaik);
+
+$kandidatServiceAccount = [];
+foreach ($folderNaik as $folder) {
+    $kandidatServiceAccount[] = $folder . '/service.json';
+    $kandidatServiceAccount[] = $folder . '/firebase/service.json';
+    $kandidatServiceAccount[] = $folder . '/private/service.json';
+}
 
 return [
     // Sama dengan project_id pada google-services.json aplikasi Android.
     'project_id' => 'siks-3819e',
 
-    // Dicoba berurutan, yang pertama terbaca dipakai. Daftar ini menutupi
-    // tempat-tempat yang wajar untuk menaruh service.json di luar public_html,
-    // sehingga tidak perlu ditebak persis satu folder.
-    'service_account_path' => [
-        $diLuarWebRoot . '/service.json',
-        $diLuarWebRoot . '/firebase/service.json',
-        $diLuarWebRoot . '/private/service.json',
-        $diLuarWebRoot . '/config/service.json',
-    ],
+    // Dicoba berurutan, yang pertama terbaca dipakai.
+    'service_account_path' => $kandidatServiceAccount,
 
     // Dibiarkan kosong dengan sengaja. Repository ini publik, jadi menuliskan
     // secret di sini sama dengan mengumumkannya. Cron pengumuman akan menolak

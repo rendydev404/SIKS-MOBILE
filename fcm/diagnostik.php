@@ -47,9 +47,13 @@ if ($saPath === '') {
     tambahCek($checks, 'FCM_SERVICE_ACCOUNT_PATH', $valid,
         $valid ? 'Terbaca. Service account: ' . $sa['client_email']
                : 'File terbaca tetapi bukan service-account JSON yang valid.');
-    $docRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '');
+    // Subdomain membuat DOCUMENT_ROOT lebih dalam dari public_html, sehingga
+    // file di public_html tetap bisa diunduh lewat domain utama meski berada
+    // di luar DOCUMENT_ROOT. Jadi yang diperiksa adalah ada tidaknya segmen
+    // public_html di dalam path.
     $saReal = realpath($saPath);
-    if ($valid && $docRoot && $saReal && strpos($saReal, $docRoot) === 0) {
+    $diWebRoot = $saReal && preg_match('#[/\\]public_html[/\\]#', $saReal);
+    if ($valid && $diWebRoot) {
         tambahCek($checks, 'Keamanan service account', false,
             'File berada di dalam web root sehingga bisa diunduh siapa pun lewat browser. Pindahkan ke luar public_html dan perbarui path-nya.');
     }
