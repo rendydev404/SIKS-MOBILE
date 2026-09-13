@@ -151,7 +151,7 @@ namespace SiksWhatsAppHelper
                 // The website just put the image and caption on the clipboard.
                 // Keep only the image while WhatsApp creates the attachment preview.
                 Clipboard.SetImage(invoiceImage);
-                SendControlV();
+                SendControlV(messageBox);
                 Thread.Sleep(1100);
 
                 if (!string.IsNullOrWhiteSpace(caption) && !TrySetCaption(window, caption))
@@ -246,7 +246,7 @@ namespace SiksWhatsAppHelper
 
                 captionBox.SetFocus();
                 Clipboard.SetText(caption, TextDataFormat.UnicodeText);
-                SendControlV();
+                SendControlV(captionBox);
                 return true;
             }
             catch (ElementNotAvailableException)
@@ -380,7 +380,7 @@ namespace SiksWhatsAppHelper
             return builder.ToString();
         }
 
-        private static void SendControlV()
+        private static void SendControlV(AutomationElement target)
         {
             INPUT[] inputs = new INPUT[]
             {
@@ -391,10 +391,60 @@ namespace SiksWhatsAppHelper
             };
 
             uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-            if (sent != inputs.Length)
+            if (sent == inputs.Length)
+            {
+                return;
+            }
+
+            // Beberapa versi WhatsApp Desktop mengekspos kontrol pesan melalui
+            // UI Automation. Coba kirim WM_PASTE langsung jika input global
+            // diblokir oleh Windows atau aplikasi keamanan.
+            if (TrySendPasteMessage(target))
+            {
+                return;
+            }
+
+            // Fallback terakhir untuk instalasi Windows lama.
+            try
+            {
+                SendKeys.SendWait("^v");
+                return;
+            }
+            catch (InvalidOperationException)
             {
                 throw new InvalidOperationException(
                     "Windows menolak perintah paste (kode " + Marshal.GetLastWin32Error() + ").");
+            }
+        }
+
+        private static bool TrySendPasteMessage(AutomationElement target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                int nativeHandle = target.Current.NativeWindowHandle;
+                if (nativeHandle == 0)
+                {
+                    return false;
+                }
+
+                UIntPtr result;
+                return SendMessageTimeout(
+                    new IntPtr(nativeHandle),
+                    WindowMessage.Paste,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    SendMessageTimeoutFlags.AbortIfHung,
+                    1000,
+                    out result) != IntPtr.Zero;
+            }
+            catch (ElementNotAvailableException)
+            {
+                return false;
             }
         }
 
@@ -441,6 +491,16 @@ namespace SiksWhatsAppHelper
         {
             internal const ushort Control = 0x11;
             internal const ushort V = 0x56;
+        }
+
+        private static class WindowMessage
+        {
+            internal const uint Paste = 0x0302;
+        }
+
+        private static class SendMessageTimeoutFlags
+        {
+            internal const uint AbortIfHung = 0x0002;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -497,6 +557,16 @@ namespace SiksWhatsAppHelper
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint numberOfInputs, INPUT[] inputs, int sizeOfInputStructure);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SendMessageTimeout(
+            IntPtr window,
+            uint message,
+            IntPtr wParam,
+            IntPtr lParam,
+            uint flags,
+            uint timeout,
+            out UIntPtr result);
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
