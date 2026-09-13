@@ -36,17 +36,6 @@ include '../includes/header.php';
 ?>
 
 <style>
-    .helper-download-button {
-        margin-top: 6px;
-        padding: 6px 10px;
-        border: 1px solid #2563eb;
-        border-radius: 6px;
-        background: #eff6ff;
-        color: #1d4ed8;
-        cursor: pointer;
-    }
-    .helper-download-button:disabled { opacity: 0.65; cursor: wait; }
-
     .invoice-search {
         flex: 0 1 360px;
         min-width: 280px;
@@ -123,8 +112,6 @@ include '../includes/header.php';
     }
 </style>
 
-<script src="../assets/js/whatsapp-helper-download.js" defer></script>
-
 <div class="toolbar">
     <div class="alert alert-info" style="margin-bottom: 25px; border-left: 5px solid #3b82f6;">
         <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Cara Menagih dengan Gambar:</h5>
@@ -132,8 +119,8 @@ include '../includes/header.php';
             <li>Klik tombol biru <strong><i class="fas fa-eye"></i> Lihat</strong> untuk melihat invoice siswa.</li>
             <li>Di halaman invoice:
                 <ul>
-                    <li><strong>Windows:</strong> Klik tombol berikut sekali saja: <button type="button" class="helper-download-button" onclick="downloadWhatsAppHelper(this)">Pasang Helper WhatsApp</button>. Setelah itu klik tombol WhatsApp; invoice dan caption disiapkan langsung di chat nomor siswa, lalu admin cukup klik <strong>Kirim</strong>.</li>
-                    <li><strong>HP:</strong> Klik tombol WhatsApp lalu pilih WhatsApp dari menu bagikan untuk mengirim gambar langsung.</li>
+                    <li><strong>Browser:</strong> Klik tombol WhatsApp. Caption otomatis terisi dan gambar invoice disalin; di chat siswa tekan <strong>Ctrl+V</strong>, lalu klik <strong>Kirim</strong>.</li>
+                    <li><strong>Aplikasi HP:</strong> Klik tombol WhatsApp untuk mengirim gambar melalui aplikasi native.</li>
                 </ul>
             </li>
         </ol>

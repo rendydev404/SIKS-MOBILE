@@ -49,7 +49,6 @@ foreach ($tunggakanSppList as $sppLabel) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Invoice - <?= e($siswa['nama']) ?></title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="../assets/js/whatsapp-helper-download.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -265,17 +264,6 @@ foreach ($tunggakanSppList as $sppLabel) {
             line-height: 1.5;
             text-align: center;
         }
-        .helper-download-button {
-            margin-top: 8px;
-            padding: 6px 10px;
-            border: 1px solid #2563eb;
-            border-radius: 6px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            cursor: pointer;
-        }
-        .helper-download-button:disabled { opacity: 0.65; cursor: wait; }
-
         #toast {
             visibility: hidden;
             min-width: 250px;
@@ -325,9 +313,8 @@ foreach ($tunggakanSppList as $sppLabel) {
 
 <div class="share-help" role="note">
     <i class="fas fa-info-circle"></i>
-    Windows: pasang SIKS WhatsApp Helper sekali saja.
-    <button type="button" class="helper-download-button" onclick="downloadWhatsAppHelper(this)">Pasang Helper</button>
-    Setelah itu, invoice dan caption langsung disiapkan di chat siswa; admin cukup memeriksa lalu klik Kirim.
+    Klik <strong>Siapkan di WhatsApp</strong>. Caption akan terisi otomatis dan gambar invoice disalin.
+    Di chat siswa, tekan <strong>Ctrl+V</strong> untuk melampirkan gambar, lalu klik <strong>Kirim</strong>.
 </div>
 
 <div id="toast">Gambar berhasil disalin!</div>
@@ -442,7 +429,6 @@ $waLink = $noWa
 <script>
 const invoiceWaLink = <?= json_encode($waLink, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const invoiceMessage = <?= json_encode($pesan, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const invoiceRecipientPhone = <?= json_encode($noWa ?: '') ?>;
 
 function showToast(msg) {
     const toast = document.getElementById('toast');
@@ -466,37 +452,16 @@ function downloadImage(canvas, fileName) {
     link.remove();
 }
 
-async function copyInvoiceToClipboard(blob, message) {
+async function copyInvoiceImageToClipboard(blob) {
     if (!window.isSecureContext || !navigator.clipboard || !window.ClipboardItem) return false;
 
     try {
-        const clipboardData = {
-            'image/png': blob,
-            'text/plain': new Blob([message], { type: 'text/plain' })
-        };
-        await navigator.clipboard.write([
-            new ClipboardItem(clipboardData)
-        ]);
+        // Caption comes from the wa.me link. Keep only the PNG here so Ctrl+V
+        // adds the image without replacing the pre-filled caption.
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         return true;
     } catch (error) {
         console.warn('Clipboard gambar tidak tersedia:', error);
-        return false;
-    }
-}
-
-function isWindowsDesktop() {
-    return /Windows NT/i.test(navigator.userAgent || '');
-}
-
-function openWindowsWhatsAppHelper(phone) {
-    window.location.href = `sikswa://compose?phone=${encodeURIComponent(phone)}`;
-}
-
-function canShareFile(file) {
-    try {
-        return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-    } catch (error) {
-        console.warn('Web Share tidak tersedia:', error);
         return false;
     }
 }
@@ -535,11 +500,10 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
 
-    const useWindowsHelper = isWindowsDesktop() && invoiceRecipientPhone !== '';
-    // Membuka tab dari klik asli mencegah popup blocker setelah html2canvas/
-    // Clipboard selesai secara asynchronous.
+    // Buka tab dari klik asli agar navigasi ke wa.me tidak diblokir setelah
+    // html2canvas dan Clipboard API selesai secara asynchronous.
     let waWindow = null;
-    if (!(window.isNativeApp && window.WhatsAppShareChannel) && !useWindowsHelper) {
+    if (!(window.isNativeApp && window.WhatsAppShareChannel)) {
         try { waWindow = window.open('about:blank', '_blank'); } catch (error) { console.warn(error); }
     }
 
@@ -548,9 +512,7 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
         scale: 2,
         backgroundColor: '#ffffff'
     }).then(async canvas => {
-        const fileName = 'Invoice_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $siswa['nama']) ?>.png';
         const blob = await canvasToBlob(canvas);
-        const file = new File([blob], fileName, { type: 'image/png' });
 
         // WebView Android: serahkan file ke bridge native agar gambar benar-benar
         // ikut menjadi attachment WhatsApp.
@@ -575,57 +537,13 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
             return;
         }
 
-        // Windows browser + helper lokal: buka langsung ke nomor siswa,
-        // tempelkan PNG dan caption, lalu admin hanya menekan tombol Kirim.
-        // Native Android tidak melewati cabang ini.
-        if (useWindowsHelper) {
-            const copied = await copyInvoiceToClipboard(blob, invoiceMessage);
-            if (!copied) {
-                showToast('Izinkan akses clipboard di browser, lalu coba lagi.');
-            } else {
-                showToast('Membuka draft WhatsApp ke nomor siswa...');
-                openWindowsWhatsAppHelper(invoiceRecipientPhone);
-            }
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            return;
-        }
-
-        // Mobile browser: Web Share dapat meneruskan file sebagai attachment.
-        if (canShareFile(file)) {
-            showToast('Membuka menu bagikan WhatsApp...');
-            try {
-                await navigator.share({
-                    files: [file],
-                    title: 'Invoice Tagihan SPP',
-                    text: invoiceMessage
-                });
-                if (waWindow && !waWindow.closed) waWindow.close();
-            } catch (error) {
-                // Cancel adalah tindakan normal; jangan tiba-tiba membuka tab lain.
-                if (error?.name === 'AbortError') {
-                    if (waWindow && !waWindow.closed) waWindow.close();
-                    return;
-                }
-                console.warn('Web Share gagal, memakai alur browser:', error);
-                const copied = await copyInvoiceToClipboard(blob, invoiceMessage);
-                showToast(copied
-                    ? 'Invoice disalin. Tempelkan di WhatsApp untuk mengirim.'
-                    : 'Browser tidak dapat menyalin invoice.');
-                setTimeout(() => openWhatsApp(waWindow), 600);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-            return;
-        }
-
-        // Fallback browser non-Windows Helper: jangan unduh otomatis.
-        const copied = await copyInvoiceToClipboard(blob, invoiceMessage);
+        // Browser biasa: wa.me mengisi caption, sedangkan gambar disalin ke
+        // clipboard supaya admin bisa menekan Ctrl+V di chat siswa.
+        const copied = await copyInvoiceImageToClipboard(blob);
         showToast(copied
-            ? 'Invoice disalin. Tempelkan di WhatsApp untuk mengirim.'
-            : 'Browser tidak dapat menyalin invoice.');
-        setTimeout(() => openWhatsApp(waWindow), 700);
+            ? 'Caption siap. Gambar disalin. Di chat tekan Ctrl+V lalu Kirim.'
+            : 'Caption siap, tetapi gambar gagal disalin otomatis.');
+        openWhatsApp(waWindow);
         btn.disabled = false;
         btn.innerHTML = originalText;
     }).catch(error => {
