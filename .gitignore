@@ -3,3 +3,8 @@
 config/firebase.secret.php
 *service-account*.json
 service.json
+
+# SIKS WhatsApp Helper intermediate build files (release executable is in downloads/)
+siks_wa_helper/*.pdb
+siks_wa_helper/*.resources
+siks_wa_helper/.test-bin/

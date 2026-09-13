@@ -114,13 +114,13 @@ include '../includes/header.php';
 
 <div class="toolbar">
     <div class="alert alert-info" style="margin-bottom: 25px; border-left: 5px solid #3b82f6;">
-        <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Cara Menagih dengan Gambar (Sangat Mudah):</h5>
+        <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Cara Menagih dengan Gambar:</h5>
         <ol style="margin-bottom: 0; padding-left: 20px;">
             <li>Klik tombol biru <strong><i class="fas fa-eye"></i> Lihat</strong> untuk melihat invoice siswa.</li>
             <li>Di halaman invoice:
                 <ul>
-                    <li><strong>Laptop:</strong> Klik tombol <strong><i class="fas fa-copy"></i> Salin & Buka WA</strong>, lalu Tempel (Ctrl+V) di WA.</li>
-                    <li><strong>HP:</strong> Klik tombol biru <strong><i class="fas fa-share-nodes"></i> Bagikan</strong> untuk langsung mengirim ke WA.</li>
+                    <li><strong>Windows:</strong> Pasang <a href="../downloads/SIKSWhatsAppHelper.exe" download>SIKS WhatsApp Helper</a> sekali saja. Setelah itu klik tombol WhatsApp; invoice dan caption disiapkan langsung di chat nomor siswa, lalu admin cukup klik <strong>Kirim</strong>.</li>
+                    <li><strong>HP:</strong> Klik tombol WhatsApp lalu pilih WhatsApp dari menu bagikan untuk mengirim gambar langsung.</li>
                 </ul>
             </li>
         </ol>

@@ -66,7 +66,7 @@ if ($isLunas) {
 $pesan .= "\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\n";
 $pesan .= "*Keuangan SMK Al Amin*";
 
-$waLink = $noWa ? "https://wa.me/" . $noWa . "?text=" . urlencode($pesan) : "#";
+$waLink = $noWa ? "https://wa.me/" . $noWa . "?text=" . rawurlencode($pesan) : "#";
 
 include '../includes/header.php';
 ?>
@@ -260,15 +260,15 @@ include '../includes/header.php';
         <a href="<?= $redirectSource == 'fitur' ? '../keuangan/fitur.php?tab=pending' : 'verifikasi.php' ?>" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Kembali
         </a>
-        <button id="btnSendWaImage" class="btn btn-success" style="background: #25d366; border-color: #25d366; color: #fff;">
-            <i class="fab fa-whatsapp" style="font-size: 18px;"></i> Buka WA & Kirim Gambar Kwitansi
+        <button id="btnSendWaImage" type="button" class="btn btn-success" style="background: #25d366; border-color: #25d366; color: #fff;">
+            <i class="fab fa-whatsapp" style="font-size: 18px;"></i> Siapkan di WhatsApp
         </button>
     </div>
 
     <?php if (!$noWa): ?>
         <div class="alert alert-warning" style="margin-bottom: 20px;">
             <i class="fas fa-exclamation-circle"></i> <strong>Nomor WA Siswa Belum Diisi!</strong><br>
-            Siswa ini belum memiliki nomor WhatsApp terdaftar. Gambar kwitansi tetap dapat diunduh / disalin.
+            Siswa ini belum memiliki nomor WhatsApp terdaftar. Lengkapi nomor siswa agar kwitansi dapat disiapkan ke chat tujuan.
         </div>
     <?php endif; ?>
 
@@ -339,11 +339,72 @@ include '../includes/header.php';
 <div id="toastMsg">Notification Message</div>
 
 <script>
+const receiptWaLink = <?= json_encode($waLink, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const receiptMessage = <?= json_encode($pesan, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const receiptRecipientPhone = <?= json_encode($noWa ?: '') ?>;
+
 function showToast(msg) {
     const toast = document.getElementById('toastMsg');
     toast.innerText = msg;
     toast.className = "show";
     setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 4000);
+}
+
+function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Browser tidak dapat membuat gambar kwitansi.')), 'image/png');
+    });
+}
+
+async function copyReceiptToClipboard(blob, message) {
+    if (!window.isSecureContext || !navigator.clipboard || !window.ClipboardItem) return false;
+
+    try {
+        const clipboardData = {
+            'image/png': blob,
+            'text/plain': new Blob([message], { type: 'text/plain' })
+        };
+        await navigator.clipboard.write([
+            new ClipboardItem(clipboardData)
+        ]);
+        return true;
+    } catch (error) {
+        console.warn('Clipboard gambar tidak tersedia:', error);
+        return false;
+    }
+}
+
+function isWindowsDesktop() {
+    return /Windows NT/i.test(navigator.userAgent || '');
+}
+
+function openWindowsWhatsAppHelper(phone) {
+    window.location.href = `sikswa://compose?phone=${encodeURIComponent(phone)}`;
+}
+
+function canShareFile(file) {
+    try {
+        return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+    } catch (error) {
+        console.warn('Web Share tidak tersedia:', error);
+        return false;
+    }
+}
+
+function openWhatsApp(waWindow) {
+    if (receiptWaLink === '#') {
+        if (waWindow && !waWindow.closed) waWindow.close();
+        showToast('Nomor WhatsApp belum diisi. Invoice sudah disiapkan; buka WhatsApp secara manual.');
+        return;
+    }
+
+    if (waWindow && !waWindow.closed) {
+        waWindow.location.href = receiptWaLink;
+        return;
+    }
+
+    const fallbackWindow = window.open(receiptWaLink, '_blank');
+    if (!fallbackWindow) window.location.href = receiptWaLink;
 }
 
 document.getElementById('btnSendWaImage').addEventListener('click', function() {
@@ -352,83 +413,92 @@ document.getElementById('btnSendWaImage').addEventListener('click', function() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses Kwitansi...';
 
-    const targetEl = document.getElementById('kwitansiArea');
+    const useWindowsHelper = isWindowsDesktop() && receiptRecipientPhone !== '';
+    // Buka tab dari klik asli agar tidak dianggap popup oleh browser setelah
+    // proses html2canvas dan Clipboard API selesai.
+    let waWindow = null;
+    if (!window.WhatsAppShareChannel && receiptWaLink !== '#' && !useWindowsHelper) {
+        try { waWindow = window.open('about:blank', '_blank'); } catch (error) { console.warn(error); }
+    }
 
-    html2canvas(targetEl, {
+    html2canvas(document.getElementById('kwitansiArea'), {
         useCORS: true,
         scale: 2,
         backgroundColor: '#ffffff'
-    }).then(canvas => {
-        canvas.toBlob(blob => {
-            const fileName = 'Kwitansi_Verifikasi_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $pembayaran['nama_siswa']) ?>.png';
-            const file = new File([blob], fileName, { type: 'image/png' });
+    }).then(async canvas => {
+        const fileName = 'Kwitansi_Verifikasi_<?= preg_replace('/[^a-zA-Z0-9_]/', '', $pembayaran['nama_siswa']) ?>.png';
+        const blob = await canvasToBlob(canvas);
+        const file = new File([blob], fileName, { type: 'image/png' });
 
-            const openWaUrl = () => {
-                window.location.href = "<?= $waLink ?>";
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            };
+        // WebView Android: attachment dikirim melalui bridge native.
+        if (window.WhatsAppShareChannel) {
+            showToast('Mengirim gambar ke WhatsApp via Aplikasi...');
+            window.WhatsAppShareChannel.postMessage(JSON.stringify({
+                base64: canvas.toDataURL('image/png').split(',')[1],
+                fileName: fileName,
+                phone: <?= json_encode($noWa ?: '') ?>,
+                text: receiptMessage
+            }));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
 
-            const downloadImage = () => {
-                let link = document.createElement('a');
-                link.download = fileName;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            };
-
-            // 0. Native Flutter App (JS Bridge)
-            if (window.WhatsAppShareChannel) {
-                showToast("Mengirim gambar ke WhatsApp via Aplikasi...");
-                window.WhatsAppShareChannel.postMessage(JSON.stringify({
-                    base64: canvas.toDataURL('image/png').split(',')[1],
-                    fileName: fileName,
-                    phone: "<?= $noWa ?>",
-                    text: <?= json_encode($pesan) ?>
-                }));
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+        // Windows browser + helper lokal: nomor tujuan, lampiran, dan caption
+        // disiapkan di WhatsApp Desktop. Pengiriman tetap keputusan admin.
+        if (useWindowsHelper) {
+            const copied = await copyReceiptToClipboard(blob, receiptMessage);
+            if (!copied) {
+                showToast('Izinkan akses clipboard di browser, lalu coba lagi.');
+            } else {
+                showToast('Membuka draft WhatsApp ke nomor siswa...');
+                openWindowsWhatsAppHelper(receiptRecipientPhone);
             }
-            // 1. Native Web Share API (Mobile Browsers - Android & iOS WhatsApp App)
-            // Attaches the Kwitansi Image file directly into WhatsApp!
-            else if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                showToast("Membuka WhatsApp dengan Gambar Kwitansi terlampir...");
-                navigator.share({
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        // Mobile browser: Web Share dapat meneruskan file sebagai attachment.
+        if (canShareFile(file)) {
+            showToast('Membuka menu bagikan WhatsApp...');
+            try {
+                await navigator.share({
                     files: [file],
                     title: 'Bukti Verifikasi Pembayaran',
-                    text: <?= json_encode($pesan) ?>
-                }).then(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
-                }).catch(err => {
-                    console.log("Web Share cancelled/failed:", err);
-                    downloadImage();
-                    setTimeout(openWaUrl, 1000);
+                    text: receiptMessage
                 });
-            } 
-            // 2. Clipboard API + Auto Download + Direct WA URL (Desktop Web Browsers)
-            else if (navigator.clipboard && window.ClipboardItem) {
-                const item = new ClipboardItem({ "image/png": blob });
-                navigator.clipboard.write([item]).then(() => {
-                    downloadImage();
-                    showToast("Gambar Kwitansi Disalin & Diunduh! Tempel (Ctrl+V) di WA.");
-                    setTimeout(openWaUrl, 1200);
-                }).catch(err => {
-                    console.error("Clipboard failed:", err);
-                    showToast("Menyiapkan gambar kwitansi...");
-                    downloadImage();
-                    setTimeout(openWaUrl, 1200);
-                });
-            } 
-            // 3. Fallback: Download Image + Direct WA URL
-            else {
-                showToast("Menyiapkan gambar kwitansi...");
-                downloadImage();
-                setTimeout(openWaUrl, 1200);
+                if (waWindow && !waWindow.closed) waWindow.close();
+            } catch (error) {
+                if (error?.name === 'AbortError') {
+                    if (waWindow && !waWindow.closed) waWindow.close();
+                    return;
+                }
+                console.warn('Web Share gagal, memakai alur browser:', error);
+                const copied = await copyReceiptToClipboard(blob, receiptMessage);
+                showToast(copied
+                    ? 'Kwitansi disalin. Tempelkan di WhatsApp untuk mengirim.'
+                    : 'Browser tidak dapat menyalin kwitansi.');
+                setTimeout(() => openWhatsApp(waWindow), 600);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
-        }, 'image/png');
-    }).catch(err => {
-        console.error("html2canvas error:", err);
-        showToast("Gagal memproses gambar!");
+            return;
+        }
+
+        // Fallback browser non-Windows Helper: jangan unduh otomatis.
+        const copied = await copyReceiptToClipboard(blob, receiptMessage);
+        showToast(copied
+            ? 'Kwitansi disalin. Tempelkan di WhatsApp untuk mengirim.'
+            : 'Browser tidak dapat menyalin kwitansi.');
+        setTimeout(() => openWhatsApp(waWindow), 700);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }).catch(error => {
+        if (waWindow && !waWindow.closed) waWindow.close();
+        console.error('Gagal memproses gambar kwitansi:', error);
+        showToast('Gagal memproses gambar kwitansi.');
         btn.disabled = false;
         btn.innerHTML = originalText;
     });
