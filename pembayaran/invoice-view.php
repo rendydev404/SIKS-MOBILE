@@ -49,6 +49,7 @@ foreach ($tunggakanSppList as $sppLabel) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Invoice - <?= e($siswa['nama']) ?></title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="../assets/js/whatsapp-helper-download.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -264,6 +265,16 @@ foreach ($tunggakanSppList as $sppLabel) {
             line-height: 1.5;
             text-align: center;
         }
+        .helper-download-button {
+            margin-top: 8px;
+            padding: 6px 10px;
+            border: 1px solid #2563eb;
+            border-radius: 6px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            cursor: pointer;
+        }
+        .helper-download-button:disabled { opacity: 0.65; cursor: wait; }
 
         #toast {
             visibility: hidden;
@@ -314,7 +325,8 @@ foreach ($tunggakanSppList as $sppLabel) {
 
 <div class="share-help" role="note">
     <i class="fas fa-info-circle"></i>
-    Windows: pasang <a href="../downloads/SIKSWhatsAppHelper.exe" download>SIKS WhatsApp Helper</a> sekali saja.
+    Windows: pasang SIKS WhatsApp Helper sekali saja.
+    <button type="button" class="helper-download-button" onclick="downloadWhatsAppHelper(this)">Pasang Helper</button>
     Setelah itu, invoice dan caption langsung disiapkan di chat siswa; admin cukup memeriksa lalu klik Kirim.
 </div>
 

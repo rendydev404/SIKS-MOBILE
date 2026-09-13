@@ -89,9 +89,71 @@ async function testPage(page, copyFunction) {
   assert(nativeIndex !== -1 && nativeIndex < helperIndex, `${copyFunction} retains native branch before Windows helper`);
 }
 
+async function testHelperDownload() {
+  const source = fs.readFileSync('assets/js/whatsapp-helper-download.js', 'utf8');
+  const calls = [];
+  const links = [];
+  class URLMock {
+    constructor(path, base) {
+      this.href = new URL(path, base).href;
+    }
+  }
+  URLMock.createObjectURL = (blob) => {
+    assert.strictEqual(blob.type, 'application/octet-stream');
+    return 'blob:helper';
+  };
+  URLMock.revokeObjectURL = (url) => assert.strictEqual(url, 'blob:helper');
+  const context = {
+    window: {},
+    document: {
+      baseURI: 'https://example.test/pembayaran/invoice-view.php',
+      body: {
+        appendChild: (link) => links.push(link),
+      },
+      createElement: (tagName) => {
+        assert.strictEqual(tagName, 'a');
+        const link = {
+          style: {},
+          click: () => { link.clicked = true; },
+          remove: () => { link.removed = true; },
+        };
+        return link;
+      },
+    },
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      return { ok: true, blob: async () => ({ type: 'application/octet-stream' }) };
+    },
+    URL: URLMock,
+    setTimeout: (callback) => { callback(); return 1; },
+    console,
+  };
+  vm.createContext(context);
+  new vm.Script(source, { filename: 'assets/js/whatsapp-helper-download.js' }).runInContext(context);
+
+  const button = { disabled: false, innerHTML: 'Pasang Helper' };
+  await context.window.downloadWhatsAppHelper(button);
+  assert.deepStrictEqual(calls.map(({ url, options }) => [url, options.cache]), [
+    ['https://example.test/downloads/SIKSWhatsAppHelper.exe', 'no-store'],
+  ]);
+  assert.strictEqual(links.length, 1);
+  assert.strictEqual(links[0].download, 'SIKSWhatsAppHelper.exe');
+  assert.strictEqual(links[0].clicked, true);
+  assert.strictEqual(links[0].removed, true);
+  assert.strictEqual(button.disabled, false);
+  assert.strictEqual(button.innerHTML, 'Pasang Helper');
+}
+
 async function run() {
   await testPage('pembayaran/invoice-view.php', 'copyInvoiceToClipboard');
   await testPage('pembayaran/verifikasi-wa.php', 'copyReceiptToClipboard');
+  await testHelperDownload();
+  for (const page of ['pembayaran/invoice-view.php', 'pembayaran/kirim-invoice.php']) {
+    const pageSource = fs.readFileSync(page, 'utf8');
+    assert.match(pageSource, /downloadWhatsAppHelper\(this\)/, `${page} exposes one-click helper installer`);
+    assert.match(pageSource, /whatsapp-helper-download\.js/, `${page} loads one-click helper installer`);
+    assert.doesNotMatch(pageSource, /href="\.\.\/downloads\/SIKSWhatsAppHelper\.exe"/, `${page} has no direct helper download link`);
+  }
   console.log('PASS: WhatsApp helper web tests');
 }
 
