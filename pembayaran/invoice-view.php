@@ -452,13 +452,15 @@ function downloadImage(canvas, fileName) {
     link.remove();
 }
 
-async function copyInvoiceImageToClipboard(blob) {
+async function copyInvoiceImageToClipboard(blobOrPromise) {
     if (!window.isSecureContext || !navigator.clipboard || !window.ClipboardItem) return false;
 
     try {
         // Caption comes from the wa.me link. Keep only the PNG here so Ctrl+V
         // adds the image without replacing the pre-filled caption.
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        // Passing the render Promise lets Clipboard.write start during the
+        // original button click, before the browser drops user activation.
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobOrPromise })]);
         return true;
     } catch (error) {
         console.warn('Clipboard gambar tidak tersedia:', error);
@@ -507,16 +509,25 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
         try { waWindow = window.open('about:blank', '_blank'); } catch (error) { console.warn(error); }
     }
 
-    html2canvas(document.getElementById('invoiceArea'), {
+    const useNativeShare = window.isNativeApp && window.WhatsAppShareChannel;
+    const imagePromise = html2canvas(document.getElementById('invoiceArea'), {
         useCORS: true,
         scale: 2,
         backgroundColor: '#ffffff'
-    }).then(async canvas => {
-        const blob = await canvasToBlob(canvas);
+    }).then(canvasToBlob);
+
+    // Start clipboard access immediately from the user gesture. Chromium can
+    // reject a later write after html2canvas has finished because activation
+    // has expired by then.
+    const clipboardPromise = useNativeShare
+        ? null
+        : copyInvoiceImageToClipboard(imagePromise);
+
+    imagePromise.then(async blob => {
 
         // WebView Android: serahkan file ke bridge native agar gambar benar-benar
         // ikut menjadi attachment WhatsApp.
-        if (window.isNativeApp && window.WhatsAppShareChannel) {
+        if (useNativeShare) {
             showToast('Menyiapkan gambar...');
             const reader = new FileReader();
             reader.onloadend = function() {
@@ -539,10 +550,19 @@ document.getElementById('copyAndWaBtn').addEventListener('click', function() {
 
         // Browser biasa: wa.me mengisi caption, sedangkan gambar disalin ke
         // clipboard supaya admin bisa menekan Ctrl+V di chat siswa.
-        const copied = await copyInvoiceImageToClipboard(blob);
-        showToast(copied
-            ? 'Caption siap. Gambar disalin. Di chat tekan Ctrl+V lalu Kirim.'
-            : 'Caption siap, tetapi gambar gagal disalin otomatis.');
+        // Retry with the resolved Blob for browsers that do not accept a
+        // Promise as a ClipboardItem value.
+        let copied = clipboardPromise ? await clipboardPromise : false;
+        if (!copied) copied = await copyInvoiceImageToClipboard(blob);
+        if (!copied) {
+            if (waWindow && !waWindow.closed) waWindow.close();
+            showToast('Gambar invoice belum tersalin. WhatsApp tidak dibuka agar gambar lama tidak ikut. Coba lagi.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        showToast('Caption siap. Gambar invoice disalin. Di chat tekan Ctrl+V lalu Kirim.');
         openWhatsApp(waWindow);
         btn.disabled = false;
         btn.innerHTML = originalText;

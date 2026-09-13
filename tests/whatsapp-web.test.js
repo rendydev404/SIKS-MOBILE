@@ -42,11 +42,12 @@ async function testImageClipboard(page, copyFunction) {
   new vm.Script(functions, { filename: page }).runInContext(context);
 
   const image = { type: 'image/png', marker: 'invoice' };
-  assert.strictEqual(await context[copyFunction](image), true, `${copyFunction} succeeds`);
+  const imagePromise = Promise.resolve(image);
+  assert.strictEqual(await context[copyFunction](imagePromise), true, `${copyFunction} succeeds`);
   assert.strictEqual(writes.length, 1, `${copyFunction} writes once`);
   const formats = writes[0][0].data;
   assert.deepStrictEqual(Object.keys(formats), ['image/png'], `${copyFunction} copies image only`);
-  assert.strictEqual(formats['image/png'], image, `${copyFunction} keeps PNG`);
+  assert.strictEqual(formats['image/png'], imagePromise, `${copyFunction} starts clipboard write with render promise`);
 
   const insecure = createContext();
   insecure.context.window.isSecureContext = false;
@@ -59,11 +60,11 @@ async function testImageClipboard(page, copyFunction) {
 function testBrowserFlow(page, copyFunction) {
   const source = fs.readFileSync(page, 'utf8');
   const nativeIndex = source.indexOf('WhatsAppShareChannel.postMessage');
-  const browserCopyIndex = source.indexOf(`const copied = await ${copyFunction}(blob);`);
+  const browserCopyIndex = source.indexOf(`${copyFunction}(imagePromise)`);
 
   assert.notStrictEqual(nativeIndex, -1, `${page} retains native WhatsApp bridge`);
   assert.notStrictEqual(browserCopyIndex, -1, `${page} copies image in browser flow`);
-  assert(nativeIndex < browserCopyIndex, `${page} keeps native branch before browser branch`);
+  assert.match(source, new RegExp(`const clipboardPromise = useNativeShare\\s*\\?\\s*null\\s*:\\s*${copyFunction}\\(imagePromise\\)`), `${page} guards clipboard flow from native app`);
   assert.match(source, /const (invoice|receipt)WaLink =/i, `${page} creates a wa.me link`);
   assert.match(source, /openWhatsApp\(waWindow\)/, `${page} opens WhatsApp after clipboard preparation`);
   assert.match(source, /Ctrl\+V/, `${page} explains the paste step`);
