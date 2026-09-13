@@ -31,7 +31,7 @@ Output berada di `downloads\SIKSWhatsAppHelper.exe`. Windows 10/11 sudah menyedi
 
 ```powershell
 .\siks_wa_helper\run-tests.ps1
-node .\tests\whatsapp-helper-web.test.js
+node .\tests\whatsapp-web.test.js
 ```
 
 ## Lepas helper
