@@ -131,6 +131,23 @@ namespace SiksWhatsAppHelper
                 FocusWindow(window);
                 Thread.Sleep(300);
 
+                AutomationElement messageBox = FindCaptionBox(window);
+                if (messageBox == null)
+                {
+                    ShowError("Kotak pesan WhatsApp tidak ditemukan. Buka chat siswa lalu coba lagi.");
+                    return 1;
+                }
+
+                try
+                {
+                    messageBox.SetFocus();
+                }
+                catch (ElementNotAvailableException)
+                {
+                    ShowError("Kotak pesan WhatsApp tidak bisa difokuskan. Buka chat siswa lalu coba lagi.");
+                    return 1;
+                }
+
                 // The website just put the image and caption on the clipboard.
                 // Keep only the image while WhatsApp creates the attachment preview.
                 Clipboard.SetImage(invoiceImage);
@@ -376,7 +393,8 @@ namespace SiksWhatsAppHelper
             uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
             if (sent != inputs.Length)
             {
-                throw new InvalidOperationException("Windows menolak perintah paste.");
+                throw new InvalidOperationException(
+                    "Windows menolak perintah paste (kode " + Marshal.GetLastWin32Error() + ").");
             }
         }
 
@@ -437,6 +455,15 @@ namespace SiksWhatsAppHelper
         {
             [FieldOffset(0)]
             internal KEYBDINPUT keyboard;
+
+            // INPUT adalah union yang ukurannya mengikuti MOUSEINPUT pada
+            // Windows 64-bit. Tanpa field ini cbSize menjadi salah dan
+            // SendInput mengembalikan 0 (ERROR_INVALID_PARAMETER).
+            [FieldOffset(0)]
+            internal MOUSEINPUT mouse;
+
+            [FieldOffset(0)]
+            internal HARDWAREINPUT hardware;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -447,6 +474,25 @@ namespace SiksWhatsAppHelper
             internal uint dwFlags;
             internal uint time;
             internal IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            internal int dx;
+            internal int dy;
+            internal uint mouseData;
+            internal uint dwFlags;
+            internal uint time;
+            internal IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HARDWAREINPUT
+        {
+            internal uint uMsg;
+            internal ushort wParamL;
+            internal ushort wParamH;
         }
 
         [DllImport("user32.dll", SetLastError = true)]
