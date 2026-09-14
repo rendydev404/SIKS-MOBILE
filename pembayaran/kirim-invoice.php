@@ -332,7 +332,7 @@ include '../includes/header.php';
 
         <div style="padding: 24px;">
             <div class="alert alert-info" style="margin-bottom: 20px; font-size: 12px; border-left: 4px solid #0ea5e9;">
-                <i class="fas fa-info-circle"></i> <strong>Pengiriman berjalan di background VPS:</strong> Anda bebas menutup browser atau laptop, proses pengiriman tetap berlanjut sampai tuntas.
+                <i class="fas fa-info-circle"></i> <strong>Pengiriman berjalan otomatis di Latar Belakang (Server):</strong> Anda bebas menutup browser atau laptop, proses pengiriman tetap berlanjut sampai tuntas.
             </div>
 
             <!-- Progress Bar -->

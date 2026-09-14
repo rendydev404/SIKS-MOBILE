@@ -203,8 +203,8 @@ include '../includes/header.php';
     <div class="wa-banner-item">
         <div class="wa-banner-icon" style="color: #facc15;"><i class="fas fa-server"></i></div>
         <div>
-            <div style="font-size: 14px; font-weight: 700;">Server Gateway VPS</div>
-            <div style="font-size: 12px; opacity: 0.8;">Proses mandiri di Docker VPS (76.13.193.138)</div>
+            <div style="font-size: 14px; font-weight: 700;">Server Gateway Mandiri</div>
+            <div style="font-size: 12px; opacity: 0.8;">Proses otomatis berjalan di Latar Belakang (Background)</div>
         </div>
     </div>
     <div>
@@ -326,9 +326,9 @@ async function fetchDeviceStatus(deviceId) {
             container.innerHTML = `
                 <i class="fas fa-exclamation-triangle fa-2x" style="color: var(--danger);"></i>
                 <p style="margin-top: 10px; font-size: 13px; color: var(--danger); font-weight: 600;">
-                    ${data?.error || 'Tidak dapat terhubung ke VPS Gateway'}
+                    ${data?.error || 'Tidak dapat terhubung ke Server Gateway'}
                 </p>
-                <small style="color: var(--text-muted);">Pastikan container Docker di VPS sudah berjalan.</small>
+                <small style="color: var(--text-muted);">Pastikan layanan server gateway sedang aktif.</small>
             `;
             btnLogout.style.display = 'none';
             card.classList.remove('is-connected');
