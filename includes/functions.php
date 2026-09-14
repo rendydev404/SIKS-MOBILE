@@ -8,6 +8,7 @@ session_start();
 
 // Auto update database structure
 require_once __DIR__ . '/../config/auto_update.php';
+require_once __DIR__ . '/../config/whatsapp_gateway.php';
 
 /**
  * Format angka ke format Rupiah

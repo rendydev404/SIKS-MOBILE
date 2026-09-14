@@ -57,6 +57,13 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="<?= BASE_URL ?>keuangan/whatsapp-gateway.php" class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'whatsapp-gateway') !== false ? 'active' : '' ?>">
+                    <i class="fab fa-whatsapp" style="color: #22c55e;"></i>
+                    <span>WhatsApp Gateway</span>
+                </a>
+            </li>
+
             <li class="nav-section">Keuangan Lainnya</li>
 
             <li class="nav-item">

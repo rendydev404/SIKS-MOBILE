@@ -118,6 +118,28 @@ function autoUpdateDatabase($pdo) {
                 $pdo->prepare("INSERT IGNORE INTO setting_pembayaran (jenis, nominal) VALUES (?, 0)")->execute([$type]);
             }
         }
+
+        // 8. Cek dan buat tabel wa_blast_logs
+        $tables = $pdo->query("SHOW TABLES LIKE 'wa_blast_logs'")->fetch();
+        if (!$tables) {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS wa_blast_logs (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                batch_id VARCHAR(64) NOT NULL,
+                siswa_id INT NOT NULL,
+                no_tujuan VARCHAR(25) NOT NULL,
+                nomor_pengirim VARCHAR(25) DEFAULT NULL,
+                device_id VARCHAR(20) DEFAULT NULL,
+                bulan VARCHAR(20) DEFAULT NULL,
+                tahun INT DEFAULT NULL,
+                status ENUM('pending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
+                pesan_error TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sent_at TIMESTAMP NULL DEFAULT NULL,
+                INDEX idx_batch (batch_id),
+                INDEX idx_siswa (siswa_id),
+                INDEX idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
         
         return true;
     } catch (PDOException $e) {
@@ -126,7 +148,7 @@ function autoUpdateDatabase($pdo) {
 }
 
 // Jalankan auto update sekali per session (Versioning untuk memaksa update)
-if (!isset($_SESSION['db_updated_v3'])) {
+if (!isset($_SESSION['db_updated_v4'])) {
     autoUpdateDatabase($pdo);
-    $_SESSION['db_updated_v3'] = true;
+    $_SESSION['db_updated_v4'] = true;
 }
