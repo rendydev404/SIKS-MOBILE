@@ -32,6 +32,25 @@ $siswaList = $stmt->fetchAll();
 
 $kelasList = $pdo->query("SELECT * FROM kelas ORDER BY tingkat, jurusan")->fetchAll();
 
+// Ambil riwayat log pengiriman WhatsApp untuk periode bulan & tahun yang dipilih
+$waLogMap = [];
+try {
+    $waLogStmt = $pdo->prepare("
+        SELECT siswa_id, status, sent_at, created_at, pesan_error, no_tujuan, device_id 
+        FROM wa_blast_logs 
+        WHERE bulan = ? AND tahun = ? 
+        ORDER BY id DESC
+    ");
+    $waLogStmt->execute([$bulanName, (int)$tahun]);
+    while ($row = $waLogStmt->fetch()) {
+        if (!isset($waLogMap[$row['siswa_id']])) {
+            $waLogMap[$row['siswa_id']] = $row;
+        }
+    }
+} catch (Exception $e) {
+    // Fallback jika terjadi kendala query
+}
+
 include '../includes/header.php';
 ?>
 
@@ -136,12 +155,25 @@ include '../includes/header.php';
 
     <!-- Toolbar Seleksi & Aksi Blast -->
     <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; user-select: none;">
                 <input type="checkbox" id="selectAllCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
                 <span>Pilih Semua Siswa</span>
             </label>
             <span id="selectionCounter" class="badge" style="background: var(--primary); color: white; font-size: 12px; padding: 4px 8px;">0 dipilih</span>
+
+            <!-- Filter Cepat Status Pengiriman WA -->
+            <div style="display: inline-flex; background: var(--bg-body); padding: 3px; border-radius: 10px; border: 1px solid var(--border-color); gap: 4px; margin-left: 8px;">
+                <button type="button" class="btn btn-sm wa-filter-btn active" data-filter="all" style="font-size: 11px; padding: 3px 10px; border-radius: 7px; font-weight: 600; border: none; background: var(--primary); color: white;">
+                    Semua
+                </button>
+                <button type="button" class="btn btn-sm wa-filter-btn" data-filter="unsend" style="font-size: 11px; padding: 3px 10px; border-radius: 7px; font-weight: 600; border: none; background: transparent; color: var(--text-secondary);">
+                    <i class="fas fa-paper-plane" style="font-size: 9px;"></i> Belum Dikirim
+                </button>
+                <button type="button" class="btn btn-sm wa-filter-btn" data-filter="sent" style="font-size: 11px; padding: 3px 10px; border-radius: 7px; font-weight: 600; border: none; background: transparent; color: var(--text-secondary);">
+                    <i class="fas fa-check-double" style="font-size: 9px; color: #16a34a;"></i> Terkirim WA
+                </button>
+            </div>
         </div>
         <div style="display: flex; gap: 10px;">
             <button type="button" id="btnOpenRunningMonitor" class="btn btn-info btn-sm" style="display: none;">
@@ -224,6 +256,7 @@ include '../includes/header.php';
                         <th>Kelas</th>
                         <th>Status SPP <?= $bulanName ?></th>
                         <th>Rincian Tunggakan</th>
+                        <th style="text-align: center; width: 14%;">Invoice WA</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -243,8 +276,10 @@ include '../includes/header.php';
                         if ($tunggakan <= 0) continue;
 
                         $noWa = formatNomorWA($siswa['no_whatsapp'] ?? '');
+                        $waLog = $waLogMap[$siswa['id']] ?? null;
+                        $waStatus = $waLog['status'] ?? null;
                     ?>
-                    <tr class="invoice-row" data-search="<?= e(strtolower($siswa['nis'] . ' ' . $siswa['nama'])) ?>">
+                    <tr class="invoice-row" data-search="<?= e(strtolower($siswa['nis'] . ' ' . $siswa['nama'])) ?>" data-wastatus="<?= $waStatus === 'sent' ? 'sent' : ($waStatus === 'pending' ? 'pending' : 'unsend') ?>">
                         <td style="text-align: center;">
                             <input type="checkbox" class="student-row-check" value="<?= $siswa['id'] ?>" data-nama="<?= e($siswa['nama']) ?>" data-wa="<?= e($noWa ?: '') ?>">
                         </td>
@@ -252,6 +287,9 @@ include '../includes/header.php';
                         <td><?= e($siswa['nis']) ?></td>
                         <td>
                             <strong><?= e($siswa['nama']) ?></strong>
+                            <span id="wa-tag-<?= $siswa['id'] ?>" class="badge" style="background: rgba(34, 197, 94, 0.12); color: #16a34a; font-size: 10px; margin-left: 6px; padding: 2px 6px; border-radius: 4px; vertical-align: middle; <?= $waStatus === 'sent' ? '' : 'display: none;' ?>">
+                                <i class="fas fa-check-circle"></i> Terkirim
+                            </span>
                             <?php if ($noWa): ?>
                                 <br><small style="color: #22c55e;"><i class="fab fa-whatsapp"></i> <?= e($noWa) ?></small>
                             <?php else: ?>
@@ -288,6 +326,28 @@ include '../includes/header.php';
                                 <?= count($tunggakanBulan) > 5 ? '...' : '' ?>
                             </span>
                         </td>
+                        <td id="wa-status-<?= $siswa['id'] ?>" style="text-align: center; white-space: nowrap;">
+                            <?php if ($waStatus === 'sent'): ?>
+                                <span class="badge" style="background: rgba(34, 197, 94, 0.12); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                                    <i class="fas fa-check-double"></i> Terkirim WA
+                                </span>
+                                <?php if (!empty($waLog['sent_at'])): ?>
+                                    <br><small style="font-size: 10px; color: var(--text-muted);"><i class="far fa-clock"></i> <?= date('d/m H:i', strtotime($waLog['sent_at'])) ?></small>
+                                <?php endif; ?>
+                            <?php elseif ($waStatus === 'pending'): ?>
+                                <span class="badge" style="background: rgba(234, 179, 8, 0.12); color: #ca8a04; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                                    <i class="fas fa-clock fa-spin"></i> Antrean
+                                </span>
+                            <?php elseif ($waStatus === 'failed'): ?>
+                                <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="<?= e($waLog['pesan_error'] ?? 'Gagal mengirim') ?>">
+                                    <i class="fas fa-times-circle"></i> Gagal
+                                </span>
+                            <?php else: ?>
+                                <span class="badge" style="background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border-color); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;">
+                                    <i class="fas fa-paper-plane" style="font-size: 9px; opacity: 0.5;"></i> Belum Dikirim
+                                </span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                              <a href="invoice-view.php?siswa_id=<?= $siswa['id'] ?>&bulan=<?= $filterBulan ?>&tahun=<?= $tahun ?>" 
                                 class="btn btn-secondary btn-sm" title="Lihat Manual Invoice">
@@ -300,7 +360,7 @@ include '../includes/header.php';
                     
                     <?php if ($no == 1): ?>
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
                             <i class="fas fa-check-circle" style="font-size: 40px; margin-bottom: 10px; color: var(--success); display: block;"></i>
                             Semua siswa sudah lunas untuk periode ini!
                         </td>
@@ -392,22 +452,54 @@ const searchStatus = document.getElementById('searchStatus');
 const searchEmpty = document.getElementById('searchEmpty');
 const invoiceRows = Array.from(document.querySelectorAll('.invoice-row'));
 
+let currentWaFilter = 'all';
+
 function filterInvoices() {
     const query = searchInput.value.trim().toLowerCase();
     let visibleCount = 0;
 
     invoiceRows.forEach((row) => {
-        const matches = !query || row.dataset.search.includes(query);
-        row.hidden = !matches;
-        if (matches) visibleCount += 1;
+        const matchesQuery = !query || row.dataset.search.includes(query);
+        const rowWaStatus = row.dataset.wastatus || 'unsend';
+        let matchesWa = true;
+        if (currentWaFilter === 'unsend') {
+            matchesWa = (rowWaStatus !== 'sent');
+        } else if (currentWaFilter === 'sent') {
+            matchesWa = (rowWaStatus === 'sent');
+        }
+
+        const isVisible = matchesQuery && matchesWa;
+        row.hidden = !isVisible;
+        if (isVisible) visibleCount += 1;
     });
 
     clearSearch.classList.toggle('is-visible', query.length > 0);
-    searchEmpty.classList.toggle('is-visible', query.length > 0 && visibleCount === 0);
+    searchEmpty.classList.toggle('is-visible', visibleCount === 0);
     searchStatus.textContent = query
         ? `${visibleCount} siswa ditemukan untuk “${searchInput.value.trim()}”.`
-        : 'Cari berdasarkan nama atau NIS siswa.';
+        : `Menampilkan ${visibleCount} siswa.`;
+
+    if (typeof updateSelectionState === 'function') {
+        updateSelectionState();
+    }
 }
+
+// Handler filter tombol status WA
+document.querySelectorAll('.wa-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.wa-filter-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-secondary)';
+        });
+        btn.classList.add('active');
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#ffffff';
+
+        currentWaFilter = btn.getAttribute('data-filter');
+        filterInvoices();
+    });
+});
 
 searchInput.addEventListener('input', filterInvoices);
 clearSearch.addEventListener('click', () => {
@@ -441,7 +533,13 @@ function updateSelectionState() {
 
 selectAllCheckbox.addEventListener('change', (e) => {
     const isChecked = e.target.checked;
-    studentChecks.forEach(c => { c.checked = isChecked; });
+    studentChecks.forEach(c => {
+        if (!c.closest('tr').hidden) {
+            c.checked = isChecked;
+        } else if (!isChecked) {
+            c.checked = false;
+        }
+    });
     tableHeaderCheck.checked = isChecked;
     updateSelectionState();
 });
@@ -587,6 +685,31 @@ async function pollProgress() {
             activeDelayCountdown.innerHTML = `<i class="fas fa-paper-plane"></i> Mengirim...`;
         }
 
+        // Update status badge di tabel secara real-time
+        if (p.results && Array.isArray(p.results)) {
+            p.results.forEach(res => {
+                const cell = document.getElementById(`wa-status-${res.siswa_id}`);
+                const tag = document.getElementById(`wa-tag-${res.siswa_id}`);
+                if (cell) {
+                    if (res.status === 'sent') {
+                        cell.innerHTML = `
+                            <span class="badge" style="background: rgba(34, 197, 94, 0.12); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                                <i class="fas fa-check-double"></i> Terkirim WA
+                            </span>
+                            <br><small style="font-size: 10px; color: #16a34a;"><i class="far fa-clock"></i> Baru saja</small>
+                        `;
+                        if (tag) tag.style.display = 'inline-block';
+                    } else if (res.status === 'failed') {
+                        cell.innerHTML = `
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="${res.error || 'Gagal mengirim'}">
+                                <i class="fas fa-times-circle"></i> Gagal Kirim
+                            </span>
+                        `;
+                    }
+                }
+            });
+        }
+
     } catch (err) {
         console.error('Error polling blast progress:', err);
     }
@@ -600,6 +723,18 @@ btnStartBlast.addEventListener('click', async () => {
     if (!confirm(`Mulai kirim tagihan otomatis untuk ${selected.length} siswa terpilih?\n\nPengiriman menggunakan 2 nomor secara bergantian dengan jeda acak 20-45 detik per siswa.`)) {
         return;
     }
+
+    // Optimistic UI: tandai siswa yang dipilih sedang dalam antrean
+    selected.forEach(id => {
+        const cell = document.getElementById(`wa-status-${id}`);
+        if (cell) {
+            cell.innerHTML = `
+                <span class="badge" style="background: rgba(234, 179, 8, 0.12); color: #ca8a04; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                    <i class="fas fa-clock fa-spin"></i> Antrean
+                </span>
+            `;
+        }
+    });
 
     btnStartBlast.disabled = true;
     btnStartBlast.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mempersiapkan...';
