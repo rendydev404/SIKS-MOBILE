@@ -1,0 +1,29 @@
+services:
+  siks-wa-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: siks-wa-gateway
+    restart: unless-stopped
+    ports:
+      - "3050:3050"
+    environment:
+      - PORT=3050
+      - API_KEY=siks_secret_wa_key_2026_alamin
+      - SESSIONS_DIR=/data/sessions
+      - MIN_DELAY_SECONDS=20
+      - MAX_DELAY_SECONDS=45
+      - BATCH_COOLDOWN_EVERY=25
+      - BATCH_COOLDOWN_SECONDS=180
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    volumes:
+      - siks_wa_sessions:/data/sessions
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  siks_wa_sessions:
+    name: siks_wa_sessions
