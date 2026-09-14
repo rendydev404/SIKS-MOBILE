@@ -33,6 +33,17 @@ if (isset($_GET['ajax'])) {
         exit;
     }
 
+    if ($action === 'send_test' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $phone = $_POST['phone'] ?? '';
+        $nama = $_POST['nama'] ?? 'Siswa Uji Coba';
+        $res = sendWaTestMessage([
+            'phone' => $phone,
+            'nama' => $nama
+        ]);
+        echo json_encode($res);
+        exit;
+    }
+
     echo json_encode(['success' => false, 'error' => 'Aksi AJAX tidak valid']);
     exit;
 }
@@ -265,6 +276,39 @@ include '../includes/header.php';
     </div>
 </div>
 
+<!-- Kartu Uji Coba Pengiriman Langsung -->
+<div class="card" style="margin-bottom: 25px; border-radius: 16px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm);">
+    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border-color); background: var(--bg-card);">
+        <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-primary);">
+            <i class="fas fa-paper-plane" style="color: #22c55e; margin-right: 8px;"></i>
+            Uji Coba Pengiriman Langsung (Test Kirim WA)
+        </h4>
+        <span class="badge badge-info" style="font-size: 11px; padding: 4px 10px;">Tes Kartu Tagihan + Teks Otomatis</span>
+    </div>
+    <div class="card-body" style="padding: 20px 24px;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            Gunakan formulir ini untuk menguji pengiriman tagihan (kartu invoice HD + format pesan resmi) ke nomor WhatsApp dummy atau nomor admin sebelum melakukan broadcast massal.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div style="flex: 1; min-width: 240px;">
+                <label style="font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-primary);">Nomor WhatsApp Penerima:</label>
+                <input type="text" id="test-wa-phone" class="form-control" placeholder="Contoh: 085885497377" value="085885497377" style="height: 42px; border-radius: 10px;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-primary);">Nama Siswa Dummy:</label>
+                <input type="text" id="test-wa-nama" class="form-control" placeholder="Contoh: Siswa Uji Coba" value="Siswa Uji Coba" style="height: 42px; border-radius: 10px;">
+            </div>
+            <div>
+                <button type="button" class="btn btn-success" id="btn-send-test" onclick="sendTestMessage()" style="height: 42px; padding: 0 20px; border-radius: 10px; font-weight: 600;">
+                    <i class="fas fa-paper-plane"></i> Kirim Uji Coba Sekarang
+                </button>
+            </div>
+        </div>
+        <div id="test-result-box" style="margin-top: 15px; display: none; padding: 12px 16px; border-radius: 10px; font-size: 13px;"></div>
+    </div>
+</div>
+
+
 <script>
 async function fetchDeviceStatus(deviceId) {
     try {
@@ -353,6 +397,61 @@ async function logoutDevice(deviceId) {
         }
     } catch (e) {
         alert('Gagal menghubungi server.');
+    }
+}
+
+async function sendTestMessage() {
+    const phoneInput = document.getElementById('test-wa-phone');
+    const namaInput = document.getElementById('test-wa-nama');
+    const btn = document.getElementById('btn-send-test');
+    const resBox = document.getElementById('test-result-box');
+
+    const phone = phoneInput.value.trim();
+    const nama = namaInput.value.trim() || 'Siswa Test';
+
+    if (!phone) {
+        alert('Masukkan nomor WhatsApp tujuan!');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Merender & Mengirim...';
+    resBox.style.display = 'block';
+    resBox.style.background = 'rgba(14, 165, 233, 0.1)';
+    resBox.style.color = '#0284c7';
+    resBox.style.border = '1px solid #38bdf8';
+    resBox.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang merender gambar invoice HD dan mengirim ke WhatsApp...';
+
+    const formData = new FormData();
+    formData.append('phone', phone);
+    formData.append('nama', nama);
+
+    try {
+        const res = await fetch('whatsapp-gateway.php?ajax=send_test', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            resBox.style.background = 'rgba(34, 197, 94, 0.1)';
+            resBox.style.color = '#16a34a';
+            resBox.style.border = '1px solid #4ade80';
+            resBox.innerHTML = `<strong><i class="fas fa-check-circle"></i> Berhasil Terkirim!</strong> ${data.message || 'Pesan terkirim.'} (Device: ${data.deviceId || 'device_1'})`;
+        } else {
+            resBox.style.background = 'rgba(239, 68, 68, 0.1)';
+            resBox.style.color = '#dc2626';
+            resBox.style.border = '1px solid #f87171';
+            resBox.innerHTML = `<strong><i class="fas fa-times-circle"></i> Gagal Mengirim:</strong> ${data.error || 'Terjadi kesalahan'}`;
+        }
+    } catch (err) {
+        resBox.style.background = 'rgba(239, 68, 68, 0.1)';
+        resBox.style.color = '#dc2626';
+        resBox.style.border = '1px solid #f87171';
+        resBox.innerHTML = `<strong><i class="fas fa-times-circle"></i> Error:</strong> Gagal terhubung ke server atau timeout.`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Uji Coba Sekarang';
     }
 }
 

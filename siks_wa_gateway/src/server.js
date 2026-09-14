@@ -141,6 +141,74 @@ app.post('/api/blast/control', (req, res) => {
   res.json(result);
 });
 
+// 7. Kirim Pesan Uji Coba Langsung ke 1 Nomor (Test Dummy)
+app.post('/api/send-test', async (req, res) => {
+  const { phone, nama, nis, kelas, caption, invoiceData, deviceId } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ success: false, error: 'Nomor telepon (phone) wajib diisi.' });
+  }
+
+  const availableDevices = sessionManager.getAvailableDeviceIds();
+  if (availableDevices.length === 0) {
+    return res.status(400).json({ success: false, error: 'Tidak ada nomor WhatsApp yang terhubung.' });
+  }
+
+  const targetDeviceId = (deviceId && availableDevices.includes(deviceId)) ? deviceId : availableDevices[0];
+  const sock = sessionManager.getSocket(targetDeviceId);
+
+  try {
+    let cleanPhone = String(phone).replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
+    if (cleanPhone.startsWith('8')) cleanPhone = '62' + cleanPhone;
+
+    const jid = `${cleanPhone}@s.whatsapp.net`;
+
+    // Render invoice card jika ada invoiceData
+    let imageBuffer = null;
+    const invData = invoiceData || {
+      nama: nama || 'Siswa Uji Coba',
+      nis: nis || '12345',
+      kelas: kelas || 'XII RPL',
+      bulanName: 'September',
+      tahun: 2026,
+      totalSppHanya: 150000,
+      totalKenaikan: 0,
+      tunggakanTotal: 150000,
+      tunggakanLainnya: []
+    };
+
+    try {
+      const raw = await invoiceRenderer.renderToImageBuffer(invData);
+      if (raw) imageBuffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    } catch (e) {
+      console.error('[SendTest] Render image error:', e.message);
+    }
+
+    const payload = {};
+    if (imageBuffer && Buffer.isBuffer(imageBuffer)) {
+      payload.image = imageBuffer;
+      payload.caption = caption || `Assalamu'alaikum Warahmatullahi Wabarakatuh.\n\n*Uji Coba Pengiriman Tagihan SPP SMK Al Amin*\nNama Siswa: *${invData.nama}*\nKelas: *${invData.kelas}*\nTotal: *Rp 150.000*\n\nPesan dan kartu invoice ini dikirim otomatis via WhatsApp Gateway SIKS.`;
+      payload.mimetype = 'image/png';
+    } else {
+      payload.text = caption || `Assalamu'alaikum Warahmatullahi Wabarakatuh.\n\n*Uji Coba Pengiriman Tagihan SPP SMK Al Amin*\nNama Siswa: *${invData.nama}*\nSistem WhatsApp Gateway SIKS berhasil terhubung.`;
+    }
+
+    const sentResult = await sock.sendMessage(jid, payload);
+
+    res.json({
+      success: true,
+      message: `Pesan uji coba berhasil dikirim ke ${cleanPhone} melalui ${targetDeviceId}.`,
+      deviceId: targetDeviceId,
+      phone: cleanPhone,
+      messageId: sentResult?.key?.id || null
+    });
+  } catch (error) {
+    console.error('[SendTest] Gagal mengirim:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 

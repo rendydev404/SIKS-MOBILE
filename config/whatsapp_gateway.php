@@ -115,3 +115,11 @@ function getWaBlastProgress() {
 function controlWaBlast($action) {
     return waGatewayCall('/api/blast/control', 'POST', ['action' => $action]);
 }
+
+/**
+ * Mengirim pesan uji coba langsung ke satu nomor siswa
+ */
+function sendWaTestMessage($data) {
+    return waGatewayCall('/api/send-test', 'POST', $data, 30);
+}
+

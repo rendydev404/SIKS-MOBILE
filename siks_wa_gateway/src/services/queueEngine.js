@@ -149,14 +149,14 @@ export class QueueEngine {
         const jid = `${cleanPhone}@s.whatsapp.net`;
 
         // 2. Validasi nomor di WhatsApp
-        let isValid = false;
+        let isValid = true;
         try {
           const checkRes = await sock.onWhatsApp(jid);
-          if (Array.isArray(checkRes) && checkRes.length > 0 && checkRes[0].exists) {
-            isValid = true;
+          if (Array.isArray(checkRes) && checkRes.length > 0) {
+            isValid = !!checkRes[0].exists;
           }
         } catch (checkErr) {
-          // Fallback anggap valid jika method check gagal
+          console.warn(`[Queue] onWhatsApp check skipped for ${cleanPhone}:`, checkErr.message);
           isValid = true;
         }
 
@@ -184,14 +184,23 @@ export class QueueEngine {
         // 4. Render gambar invoice
         let imageBuffer = null;
         if (this.invoiceRenderer) {
-          imageBuffer = await this.invoiceRenderer.renderToImageBuffer(item.invoiceData || item);
+          try {
+            const rawBuffer = await this.invoiceRenderer.renderToImageBuffer(item.invoiceData || item);
+            if (rawBuffer) {
+              imageBuffer = Buffer.isBuffer(rawBuffer) ? rawBuffer : Buffer.from(rawBuffer);
+            }
+          } catch (renderErr) {
+            console.error(`[Queue] Gagal render gambar invoice untuk ${item.nama}:`, renderErr.message);
+            imageBuffer = null;
+          }
         }
 
         // 5. Kirim pesan ke WhatsApp
         const messagePayload = {};
-        if (imageBuffer) {
+        if (imageBuffer && Buffer.isBuffer(imageBuffer)) {
           messagePayload.image = imageBuffer;
           messagePayload.caption = item.caption || '';
+          messagePayload.mimetype = 'image/png';
         } else {
           messagePayload.text = item.caption || 'Tagihan SPP';
         }
@@ -209,6 +218,7 @@ export class QueueEngine {
           timestamp: new Date().toISOString()
         });
       } catch (sendError) {
+        console.error(`[Queue] Gagal kirim WA ke ${item.nama} (${item.phone}):`, sendError);
         this.failedCount++;
         this.results.push({
           siswa_id: item.id,

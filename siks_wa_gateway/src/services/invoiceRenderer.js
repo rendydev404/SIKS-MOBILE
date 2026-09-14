@@ -145,7 +145,7 @@ export class InvoiceRenderer {
         omitBackground: true
       });
 
-      return imageBuffer;
+      return Buffer.from(imageBuffer);
     } finally {
       await page.close();
     }
