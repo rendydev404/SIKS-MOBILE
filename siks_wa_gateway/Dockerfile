@@ -1,10 +1,9 @@
-FROM node:20-bullseye-slim
+FROM node:20-bookworm-slim
 
-# Install Chromium and required fonts for Puppeteer
+# Install Chromium and required fonts for Puppeteer in Debian Bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
-    fonts-freefont-ttf \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -15,7 +14,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 COPY src/ ./src/
 
